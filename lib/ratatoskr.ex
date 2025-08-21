@@ -1,12 +1,12 @@
 defmodule Ratatoskr do
   @moduledoc """
   Ratatoskr - A lightweight message broker built with Elixir/OTP.
-  
+
   Named after the Norse mythology squirrel who carries messages between
   the eagle at the top of Yggdrasil and the dragon at its roots.
-  
+
   ## Usage
-  
+
       # Start the broker (automatically started with the application)
       Application.ensure_all_started(:ratatoskr)
       
@@ -42,9 +42,9 @@ defmodule Ratatoskr do
 
   @doc """
   Creates a new topic.
-  
+
   ## Examples
-  
+
       {:ok, "orders"} = Ratatoskr.create_topic("orders")
       {:error, :topic_already_exists} = Ratatoskr.create_topic("orders")
   """
@@ -55,9 +55,9 @@ defmodule Ratatoskr do
 
   @doc """
   Deletes an existing topic and stops all its subscribers.
-  
+
   ## Examples
-  
+
       :ok = Ratatoskr.delete_topic("orders")
       {:error, :topic_not_found} = Ratatoskr.delete_topic("nonexistent")
   """
@@ -68,9 +68,9 @@ defmodule Ratatoskr do
 
   @doc """
   Lists all active topics.
-  
+
   ## Examples
-  
+
       {:ok, ["orders", "users"]} = Ratatoskr.list_topics()
   """
   @spec list_topics() :: {:ok, list(topic_name())}
@@ -80,9 +80,9 @@ defmodule Ratatoskr do
 
   @doc """
   Publishes a message to a topic.
-  
+
   ## Examples
-  
+
       {:ok, message_id} = Ratatoskr.publish("orders", %{id: 123})
       {:error, :topic_not_found} = Ratatoskr.publish("nonexistent", %{})
   """
@@ -93,12 +93,12 @@ defmodule Ratatoskr do
 
   @doc """
   Subscribes the calling process to receive messages from a topic.
-  
+
   The subscriber process will receive messages in the format:
   `{:message, %Ratatoskr.Message{}}`
-  
+
   ## Examples
-  
+
       {:ok, ref} = Ratatoskr.subscribe("orders")
       receive do
         {:message, message} -> 
@@ -114,28 +114,30 @@ defmodule Ratatoskr do
   Subscribes a specific process to receive messages from a topic.
   """
   @spec subscribe(topic_name(), pid()) :: {:ok, subscription_ref()} | {:error, term()}
-  def subscribe(topic_name, subscriber_pid) when is_binary(topic_name) and is_pid(subscriber_pid) do
+  def subscribe(topic_name, subscriber_pid)
+      when is_binary(topic_name) and is_pid(subscriber_pid) do
     TopicServer.subscribe(topic_name, subscriber_pid)
   end
 
   @doc """
   Unsubscribes from a topic using the subscription reference.
-  
+
   ## Examples
-  
+
       {:ok, ref} = Ratatoskr.subscribe("orders")
       :ok = Ratatoskr.unsubscribe("orders", ref)
   """
   @spec unsubscribe(topic_name(), subscription_ref()) :: :ok | {:error, term()}
-  def unsubscribe(topic_name, subscription_ref) when is_binary(topic_name) and is_reference(subscription_ref) do
+  def unsubscribe(topic_name, subscription_ref)
+      when is_binary(topic_name) and is_reference(subscription_ref) do
     TopicServer.unsubscribe(topic_name, subscription_ref)
   end
 
   @doc """
   Gets statistics for a topic.
-  
+
   ## Examples
-  
+
       {:ok, %{topic: "orders", message_count: 42, subscriber_count: 3}} = Ratatoskr.stats("orders")
   """
   @spec stats(topic_name()) :: {:ok, map()} | {:error, term()}
@@ -145,9 +147,9 @@ defmodule Ratatoskr do
 
   @doc """
   Checks if a topic exists.
-  
+
   ## Examples
-  
+
       true = Ratatoskr.topic_exists?("orders")
       false = Ratatoskr.topic_exists?("nonexistent")
   """

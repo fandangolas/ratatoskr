@@ -11,10 +11,10 @@ defmodule Ratatoskr.Application do
     children = [
       # Registry for topic discovery
       {Registry, keys: :unique, name: Ratatoskr.Registry},
-      
+
       # DynamicSupervisor for topics
       {DynamicSupervisor, strategy: :one_for_one, name: Ratatoskr.Topic.Supervisor},
-      
+
       # Broker coordinator
       Ratatoskr.Broker
     ]

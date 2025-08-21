@@ -1,7 +1,7 @@
 defmodule Ratatoskr.Topic.Server do
   @moduledoc """
   GenServer managing a single topic's message queue and subscribers.
-  
+
   Each topic runs in its own GenServer process, providing fault isolation
   and natural backpressure. Messages are stored in an in-memory queue
   and pushed to all active subscribers.
@@ -12,10 +12,10 @@ defmodule Ratatoskr.Topic.Server do
   alias Ratatoskr.Message
 
   @type state :: %{
-    name: String.t(),
-    messages: :queue.queue(),
-    subscribers: list({pid(), reference()})
-  }
+          name: String.t(),
+          messages: :queue.queue(),
+          subscribers: list({pid(), reference()})
+        }
 
   @doc """
   Starts a new topic server.
@@ -96,7 +96,7 @@ defmodule Ratatoskr.Topic.Server do
     monitor_ref = Process.monitor(subscriber_pid)
     new_subscribers = [{subscriber_pid, monitor_ref} | state.subscribers]
     new_state = %{state | subscribers: new_subscribers}
-    
+
     Logger.debug("New subscriber for topic #{state.name}: #{inspect(subscriber_pid)}")
     {:reply, {:ok, monitor_ref}, new_state}
   end
@@ -108,6 +108,7 @@ defmodule Ratatoskr.Topic.Server do
         new_subscribers = Enum.reject(state.subscribers, fn {_pid, r} -> r == ref end)
         new_state = %{state | subscribers: new_subscribers}
         {:reply, :ok, new_state}
+
       nil ->
         {:reply, {:error, :subscription_not_found}, state}
     end
@@ -119,6 +120,7 @@ defmodule Ratatoskr.Topic.Server do
       message_count: :queue.len(state.messages),
       subscriber_count: length(state.subscribers)
     }
+
     {:reply, {:ok, stats}, state}
   end
 
@@ -146,7 +148,7 @@ defmodule Ratatoskr.Topic.Server do
 
   defp add_message_and_notify(state, message) do
     new_messages = :queue.in(message, state.messages)
-    
+
     # Notify all subscribers
     Enum.each(state.subscribers, fn {pid, _ref} ->
       send(pid, {:message, message})

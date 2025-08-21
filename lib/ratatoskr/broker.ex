@@ -9,8 +9,8 @@ defmodule Ratatoskr.Broker do
   alias Ratatoskr.Topic.Server, as: TopicServer
 
   @type state :: %{
-    topics: MapSet.t(String.t())
-  }
+          topics: MapSet.t(String.t())
+        }
 
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, :ok, Keyword.put_new(opts, :name, __MODULE__))
@@ -69,7 +69,7 @@ defmodule Ratatoskr.Broker do
           new_state = %{state | topics: MapSet.put(state.topics, topic_name)}
           Logger.info("Created topic: #{topic_name}")
           {:reply, {:ok, topic_name}, new_state}
-        
+
         {:error, reason} ->
           Logger.error("Failed to create topic #{topic_name}: #{inspect(reason)}")
           {:reply, {:error, reason}, state}
@@ -84,7 +84,7 @@ defmodule Ratatoskr.Broker do
           new_state = %{state | topics: MapSet.delete(state.topics, topic_name)}
           Logger.info("Deleted topic: #{topic_name}")
           {:reply, :ok, new_state}
-        
+
         {:error, reason} ->
           Logger.error("Failed to delete topic #{topic_name}: #{inspect(reason)}")
           {:reply, {:error, reason}, state}
@@ -107,7 +107,7 @@ defmodule Ratatoskr.Broker do
       start: {TopicServer, :start_link, [topic_name]},
       restart: :transient
     }
-    
+
     DynamicSupervisor.start_child(Ratatoskr.Topic.Supervisor, child_spec)
   end
 
@@ -115,6 +115,7 @@ defmodule Ratatoskr.Broker do
     case Registry.lookup(Ratatoskr.Registry, topic_name) do
       [{pid, _}] ->
         DynamicSupervisor.terminate_child(Ratatoskr.Topic.Supervisor, pid)
+
       [] ->
         {:error, :topic_not_found}
     end
