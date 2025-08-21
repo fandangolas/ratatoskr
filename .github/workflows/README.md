@@ -8,9 +8,9 @@ Comprehensive CI pipeline that runs on every push to `main` and `benchmarking` b
 
 ### Jobs
 
-#### 1. Test Matrix
-- **Elixir versions**: 1.15.8, 1.16.3, 1.17.3 (latest)
-- **OTP versions**: 26.0, 26.2.5, 27.3.4.2 (latest)
+#### 1. Test Job
+- **Elixir version**: 1.17.3 (latest stable)
+- **OTP version**: 27.3.4.2 (latest stable)
 - Tests compilation, formatting, and code quality
 - Runs unit and integration tests
 - Generates test coverage reports

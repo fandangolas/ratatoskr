@@ -11,27 +11,8 @@ env:
 
 jobs:
   test:
-    name: Test (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
+    name: Test (Elixir 1.17.3 / OTP 27.3.4.2)
     runs-on: ubuntu-latest
-    
-    strategy:
-      matrix:
-        include:
-          # Latest stable versions
-          - elixir: '1.17.3'
-            otp: '27.3.4.2'
-            coverage: true
-            lint: true
-          # Previous stable versions for compatibility
-          - elixir: '1.16.3'
-            otp: '26.2.5'
-            coverage: false
-            lint: false
-          # Minimum supported versions
-          - elixir: '1.15.8'
-            otp: '26.0'
-            coverage: false
-            lint: false
 
     steps:
     - name: Checkout code
@@ -40,8 +21,8 @@ jobs:
     - name: Set up Elixir
       uses: erlef/setup-beam@v1
       with:
-        elixir-version: ${{ matrix.elixir }}
-        otp-version: ${{ matrix.otp }}
+        elixir-version: '1.17.3'
+        otp-version: '27.3.4.2'
 
     - name: Cache dependencies
       uses: actions/cache@v4
@@ -49,10 +30,9 @@ jobs:
         path: |
           deps
           _build
-        key: ${{ runner.os }}-mix-${{ matrix.elixir }}-${{ matrix.otp }}-${{ hashFiles('**/mix.lock') }}
+        key: ${{ runner.os }}-mix-1.17.3-27.3.4.2-${{ hashFiles('**/mix.lock') }}
         restore-keys: |
-          ${{ runner.os }}-mix-${{ matrix.elixir }}-${{ matrix.otp }}-
-          ${{ runner.os }}-mix-${{ matrix.elixir }}-
+          ${{ runner.os }}-mix-1.17.3-27.3.4.2-
           ${{ runner.os }}-mix-
 
     - name: Install dependencies
@@ -62,11 +42,9 @@ jobs:
       run: mix compile --warnings-as-errors
 
     - name: Check code formatting
-      if: matrix.lint
       run: mix format --check-formatted
 
     - name: Run Credo (static analysis)
-      if: matrix.lint
       run: mix credo --strict
       continue-on-error: true
 
@@ -74,11 +52,9 @@ jobs:
       run: mix test --exclude performance --exclude stress --exclude recovery
 
     - name: Generate test coverage
-      if: matrix.coverage
       run: mix test --cover --exclude performance --exclude stress --exclude recovery
 
     - name: Upload coverage to Codecov
-      if: matrix.coverage
       uses: codecov/codecov-action@v4
       with:
         file: ./cover/excoveralls.json
