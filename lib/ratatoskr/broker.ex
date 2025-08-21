@@ -45,10 +45,7 @@ defmodule Ratatoskr.Broker do
   """
   @spec topic_exists?(String.t()) :: boolean()
   def topic_exists?(topic_name) do
-    case Registry.lookup(Ratatoskr.Registry, topic_name) do
-      [] -> false
-      [_] -> true
-    end
+    GenServer.call(__MODULE__, {:topic_exists?, topic_name})
   end
 
   # GenServer Callbacks
@@ -97,6 +94,11 @@ defmodule Ratatoskr.Broker do
   def handle_call(:list_topics, _from, state) do
     topics = MapSet.to_list(state.topics)
     {:reply, {:ok, topics}, state}
+  end
+
+  def handle_call({:topic_exists?, topic_name}, _from, state) do
+    exists = MapSet.member?(state.topics, topic_name)
+    {:reply, exists, state}
   end
 
   # Private Functions

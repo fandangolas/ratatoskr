@@ -80,7 +80,7 @@ defmodule RatatoskrTest do
       # Create multiple test processes
       test_pid = self()
 
-      subscribers =
+      _subscribers =
         for i <- 1..3 do
           spawn_link(fn ->
             {:ok, _ref} = Ratatoskr.subscribe(topic_name)
