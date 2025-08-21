@@ -1,7 +1,7 @@
 # 🐿️ Ratatoskr
 
 <div align="center">
-  <img src="https://64.media.tumblr.com/929ec29752b3017937dcccb9297916cc/29df4886dc0e9634-40/s540x810/743bd0878d44c6b247a796ce3826eed3cc61f451.gifv" width="200" align="right" />
+  <img src="./ratatoskr.webp" width="200" align="right" alt="Ratatoskr - The messenger squirrel" />
   
   **A lightweight, high-performance message broker built with Elixir/OTP**
   
@@ -19,6 +19,7 @@
 - **Low Latency**: P99 < 100ms response times
 - **Fault Tolerant**: OTP supervision trees with automatic recovery
 - **Concurrent**: Support for 500+ concurrent subscribers per topic
+- **gRPC Integration**: Easy multi-language client support via Protocol Buffers
 - **Simple API**: Clean, intuitive publish/subscribe interface
 - **Production Ready**: Comprehensive testing and CI/CD pipeline
 
@@ -53,6 +54,33 @@ receive do
 end
 ```
 
+## 🔌 gRPC Integration
+
+Ratatoskr uses gRPC for high-performance, multi-language client support:
+
+```go
+// Connect from Go, Java, Python, C++, and more
+client, err := ratatoskr.NewClient("localhost:50051")
+
+// Publish messages with type safety
+resp, err := client.Publish(ctx, &pb.PublishRequest{
+    Topic:   "orders",
+    Payload: orderBytes,
+})
+
+// Stream subscriptions in real-time
+stream, err := client.Subscribe(ctx, &pb.SubscribeRequest{
+    Topic: "orders",
+})
+```
+
+**Benefits:**
+- **Type-safe** communication via Protocol Buffers
+- **Streaming support** for real-time subscriptions
+- **Auto-generated clients** for multiple languages
+- **100K+ msg/s** throughput with binary protocol
+- **Built-in** load balancing and connection management
+
 ## 📊 Performance
 
 Ratatoskr delivers exceptional performance through careful engineering:
@@ -71,6 +99,7 @@ Built on proven OTP patterns for maximum reliability:
 - **One GenServer per topic** - Fault isolation and natural backpressure
 - **DynamicSupervisor** - Dynamic topic lifecycle management  
 - **Registry** - Fast process discovery and routing
+- **gRPC Server** - High-performance binary protocol for clients
 - **ETS** - High-performance in-memory message storage
 - **Supervision Trees** - Automatic crash recovery
 
