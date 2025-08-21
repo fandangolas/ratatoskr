@@ -9,8 +9,8 @@ defmodule Ratatoskr.Broker do
   alias Ratatoskr.Topic.Server, as: TopicServer
 
   @type state :: %{
-    topics: MapSet.t(String.t())
-  }
+          topics: MapSet.t(String.t())
+        }
 
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, :ok, Keyword.put_new(opts, :name, __MODULE__))
@@ -45,10 +45,7 @@ defmodule Ratatoskr.Broker do
   """
   @spec topic_exists?(String.t()) :: boolean()
   def topic_exists?(topic_name) do
-    case Registry.lookup(Ratatoskr.Registry, topic_name) do
-      [] -> false
-      [_] -> true
-    end
+    GenServer.call(__MODULE__, {:topic_exists?, topic_name})
   end
 
   # GenServer Callbacks
@@ -69,7 +66,7 @@ defmodule Ratatoskr.Broker do
           new_state = %{state | topics: MapSet.put(state.topics, topic_name)}
           Logger.info("Created topic: #{topic_name}")
           {:reply, {:ok, topic_name}, new_state}
-        
+
         {:error, reason} ->
           Logger.error("Failed to create topic #{topic_name}: #{inspect(reason)}")
           {:reply, {:error, reason}, state}
@@ -84,7 +81,7 @@ defmodule Ratatoskr.Broker do
           new_state = %{state | topics: MapSet.delete(state.topics, topic_name)}
           Logger.info("Deleted topic: #{topic_name}")
           {:reply, :ok, new_state}
-        
+
         {:error, reason} ->
           Logger.error("Failed to delete topic #{topic_name}: #{inspect(reason)}")
           {:reply, {:error, reason}, state}
@@ -99,6 +96,11 @@ defmodule Ratatoskr.Broker do
     {:reply, {:ok, topics}, state}
   end
 
+  def handle_call({:topic_exists?, topic_name}, _from, state) do
+    exists = MapSet.member?(state.topics, topic_name)
+    {:reply, exists, state}
+  end
+
   # Private Functions
 
   defp start_topic_server(topic_name) do
@@ -107,7 +109,7 @@ defmodule Ratatoskr.Broker do
       start: {TopicServer, :start_link, [topic_name]},
       restart: :transient
     }
-    
+
     DynamicSupervisor.start_child(Ratatoskr.Topic.Supervisor, child_spec)
   end
 
@@ -115,6 +117,7 @@ defmodule Ratatoskr.Broker do
     case Registry.lookup(Ratatoskr.Registry, topic_name) do
       [{pid, _}] ->
         DynamicSupervisor.terminate_child(Ratatoskr.Topic.Supervisor, pid)
+
       [] ->
         {:error, :topic_not_found}
     end
