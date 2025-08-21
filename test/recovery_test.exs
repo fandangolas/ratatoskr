@@ -6,6 +6,12 @@ defmodule Ratatoskr.RecoveryTest do
   @moduletag :recovery
   @moduletag timeout: 30_000
 
+  setup_all do
+    # Ensure application is started
+    Application.ensure_all_started(:ratatoskr)
+    :ok
+  end
+
   describe "Supervisor Tree Recovery" do
     test "topic server recovers from crashes" do
       topic_name = BenchmarkHelpers.benchmark_topic("crash_recovery")
