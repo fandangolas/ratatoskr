@@ -1,6 +1,6 @@
 defmodule Ratatoskr.RecoveryTest do
   use ExUnit.Case, async: false
-  alias Ratatoskr.BenchmarkHelpers
+  alias BenchmarkHelpers
   require Logger
 
   @moduletag :recovery

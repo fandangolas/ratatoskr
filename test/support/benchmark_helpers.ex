@@ -1,4 +1,4 @@
-defmodule Ratatoskr.BenchmarkHelpers do
+defmodule BenchmarkHelpers do
   @moduledoc """
   Utilities for benchmarking and performance testing Ratatoskr.
 
