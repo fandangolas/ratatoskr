@@ -38,6 +38,7 @@ Ratatoskr is a lightweight message broker built on Elixir/OTP, designed to provi
 - [x] One GenServer per topic for isolation
 - [x] Erlang `:queue` for message storage (ETS optimization pending)
 - [x] Registry for process discovery
+- [x] **gRPC Protocol** for client communication (see Decision D9)
 
 #### Achievements Beyond Target:
 - **Performance benchmarking suite** with latency percentiles
@@ -350,11 +351,11 @@ Ratatoskr is a lightweight message broker built on Elixir/OTP, designed to provi
 - **Status:** Approved
 
 ### **D6: Public API Protocol**
-**Decision:** HTTP/REST for control plane, TCP for data plane
-- **Rationale:** Easy integration, good performance where needed
-- **Trade-off:** Two protocols to maintain
-- **Alternative considered:** gRPC, WebSocket only
-- **Status:** Under review
+**Decision:** gRPC for both control and data plane
+- **Rationale:** Unified protocol with excellent performance and tooling
+- **Trade-off:** Requires Protocol Buffer knowledge and tooling
+- **Alternative considered:** HTTP/REST + WebSocket hybrid
+- **Status:** Superseded by Decision D9
 
 ### **D7: Configuration Management**
 **Decision:** Runtime configuration via API, persist to disk
@@ -368,6 +369,22 @@ Ratatoskr is a lightweight message broker built on Elixir/OTP, designed to provi
 - **Rationale:** Better coverage of edge cases
 - **Trade-off:** Longer test execution time
 - **Alternative considered:** Traditional unit tests only
+- **Status:** Approved
+
+### **D9: Client Communication Protocol**
+**Decision:** gRPC with Protocol Buffers
+- **Rationale:** 
+  - Production-ready performance (100K+ msg/s)
+  - Built-in streaming for real-time subscriptions
+  - Type safety and schema evolution
+  - Industry standard with excellent tooling
+  - Multi-language client generation
+- **Trade-off:** More complex than HTTP REST, requires Protocol Buffer compilation
+- **Alternatives considered:** 
+  - HTTP REST (too slow for high throughput)
+  - WebSocket (lacks type safety, complex state management)
+  - Custom Binary TCP (too complex, requires custom client libraries)
+- **Performance expectation:** 100K-200K msg/s with batching support
 - **Status:** Approved
 
 ---

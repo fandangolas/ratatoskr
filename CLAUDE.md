@@ -61,11 +61,12 @@ ratatoskr/
 3. **Registry for process discovery** - Built-in Elixir Registry
 4. **Push model for consumers** - At least in MVP
 5. **UUID v4 for message IDs** - No coordination required
+6. **gRPC for client communication** - High performance, type safety, streaming support
 
 ### Technology Stack
-- **Elixir 1.15+** 
-- **OTP 26+**
-- **No external dependencies for core** (MVP)
+- **Elixir 1.17.3** 
+- **OTP 27.3.4.2**
+- **gRPC + Protocol Buffers** - Client communication protocol
 - **Phoenix** (later, for monitoring dashboard)
 - **Telemetry** (for metrics)
 
@@ -97,6 +98,29 @@ end)
 # Unsubscribe
 :ok = Ratatoskr.unsubscribe(subscription_id)
 ```
+
+### gRPC API (Next Implementation Phase)
+```protobuf
+service MessageBroker {
+  // Topic management
+  rpc CreateTopic(CreateTopicRequest) returns (CreateTopicResponse);
+  rpc DeleteTopic(DeleteTopicRequest) returns (DeleteTopicResponse);
+  rpc ListTopics(ListTopicsRequest) returns (ListTopicsResponse);
+  
+  // Publishing
+  rpc Publish(PublishRequest) returns (PublishResponse);
+  rpc PublishBatch(PublishBatchRequest) returns (PublishBatchResponse);
+  
+  // Subscribing (streaming)
+  rpc Subscribe(SubscribeRequest) returns (stream Message);
+}
+```
+
+**Expected Performance with gRPC:**
+- **Throughput**: 100K-200K msg/s per node
+- **Latency**: P99 < 1ms
+- **Concurrent connections**: 10K+ clients
+- **Language support**: Go, Java, Python, C++, etc.
 
 ## 🚀 Implementation Steps
 
@@ -289,6 +313,13 @@ When continuing development:
 3. **Pick next task**: Follow the implementation steps
 4. **Test incrementally**: Write test, implement, verify
 5. **Update progress**: Mark completed items with ✅
+
+### Next Priority: gRPC Implementation
+1. Add gRPC dependencies to `mix.exs`
+2. Create Protocol Buffer definitions (`protos/ratatoskr.proto`)
+3. Implement gRPC server endpoints
+4. Add gRPC tests
+5. Create Go client library for core-banking-lab integration
 
 ## 📚 Quick References
 
