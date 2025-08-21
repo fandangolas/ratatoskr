@@ -1,0 +1,128 @@
+syntax = "proto3";
+
+package ratatoskr;
+
+// Message broker service definition
+service MessageBroker {
+  // Topic management
+  rpc CreateTopic(CreateTopicRequest) returns (CreateTopicResponse);
+  rpc DeleteTopic(DeleteTopicRequest) returns (DeleteTopicResponse);
+  rpc ListTopics(ListTopicsRequest) returns (ListTopicsResponse);
+  rpc TopicExists(TopicExistsRequest) returns (TopicExistsResponse);
+  rpc GetStats(GetStatsRequest) returns (GetStatsResponse);
+  
+  // Publishing
+  rpc Publish(PublishRequest) returns (PublishResponse);
+  rpc PublishBatch(PublishBatchRequest) returns (PublishBatchResponse);
+  
+  // Subscribing (server streaming)
+  rpc Subscribe(SubscribeRequest) returns (stream Message);
+  
+  // Unsubscribe
+  rpc Unsubscribe(UnsubscribeRequest) returns (UnsubscribeResponse);
+}
+
+// Topic management messages
+message CreateTopicRequest {
+  string name = 1;
+}
+
+message CreateTopicResponse {
+  string topic = 1;
+  bool created = 2;
+  string error = 3;
+}
+
+message DeleteTopicRequest {
+  string name = 1;
+}
+
+message DeleteTopicResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message ListTopicsRequest {}
+
+message ListTopicsResponse {
+  repeated string topics = 1;
+}
+
+message TopicExistsRequest {
+  string name = 1;
+}
+
+message TopicExistsResponse {
+  bool exists = 1;
+}
+
+message GetStatsRequest {
+  string topic = 1;
+}
+
+message GetStatsResponse {
+  string topic = 1;
+  int64 message_count = 2;
+  int32 subscriber_count = 3;
+  string error = 4;
+}
+
+// Publishing messages
+message PublishRequest {
+  string topic = 1;
+  bytes payload = 2;
+  map<string, string> metadata = 3;
+}
+
+message PublishResponse {
+  string message_id = 1;
+  int64 timestamp = 2;
+  bool success = 3;
+  string error = 4;
+}
+
+message PublishBatchRequest {
+  string topic = 1;
+  repeated PublishRequest messages = 2;
+}
+
+message PublishBatchResponse {
+  repeated PublishResponse results = 1;
+  int32 success_count = 2;
+  int32 error_count = 3;
+}
+
+// Subscription messages
+message SubscribeRequest {
+  string topic = 1;
+  string subscriber_id = 2;
+}
+
+message UnsubscribeRequest {
+  string topic = 1;
+  string subscription_ref = 2;
+}
+
+message UnsubscribeResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+// Message definition
+message Message {
+  string id = 1;
+  string topic = 2;
+  bytes payload = 3;
+  map<string, string> metadata = 4;
+  int64 timestamp = 5;
+}
+
+// Acknowledgment
+message AckRequest {
+  string message_id = 1;
+  bool success = 2;
+}
+
+message AckResponse {
+  bool acknowledged = 1;
+}
