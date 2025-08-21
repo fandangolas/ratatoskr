@@ -12,21 +12,22 @@ Ratatoskr is a lightweight message broker built on Elixir/OTP, designed to provi
 - Sub-10ms p99 latency for message publishing
 - 10,000+ messages/second throughput per node
 
-**Current Status:** ✅ **Milestone 1 Complete - Core engine operational with 74,771+ msg/s throughput**
+**Current Status:** 🚧 **Milestone 1: 90% Complete - Core engine operational (74,771+ msg/s), gRPC server pending**
 
 ---
 
 ## 🚀 **Milestones**
 
-### **Milestone 1: Core Message Engine** ✅ **COMPLETE**
-**Duration:** Completed | **Complexity:** Medium
+### **Milestone 1: Core Message Engine** 🚧 **IN PROGRESS**
+**Duration:** 90% Complete | **Complexity:** Medium
 
 #### Deliverables:
 - [x] Topic management (create, delete, list, exists)
 - [x] In-memory message queue per topic
-- [x] Basic publish/subscribe API
+- [x] Basic publish/subscribe API (Elixir API complete)
 - [x] Process supervision tree
 - [x] Unit test coverage >80% (achieved 94.6%)
+- [ ] **gRPC server implementation for client communication**
 
 #### Success Criteria:
 - [x] Publish 1000 msg/s to a single topic (**achieved 74,771 msg/s - 74x target**)
@@ -46,6 +47,13 @@ Ratatoskr is a lightweight message broker built on Elixir/OTP, designed to provi
 - **Recovery testing** for crash scenarios
 - **CI/CD pipeline** with comprehensive validation
 - **94.6% test coverage** on core functionality
+
+#### Remaining Work:
+- [ ] Add gRPC dependencies to mix.exs
+- [ ] Create Protocol Buffer definitions
+- [ ] Implement gRPC server endpoints
+- [ ] Test gRPC integration
+- [ ] Create example Go client for core-banking-lab
 
 ---
 
@@ -420,8 +428,10 @@ Ratatoskr is a lightweight message broker built on Elixir/OTP, designed to provi
 
 ## 📅 **Implementation Roadmap**
 
-**✅ Completed:**
-- **Milestone 1**: Core Message Engine with exceptional performance (74x target throughput)
+**🚧 In Progress:**
+- **Milestone 1**: Core Message Engine (90% complete - gRPC server remaining)
+  - ✅ Core pub/sub engine with 74x target throughput
+  - ⏳ gRPC server implementation for external clients
 
 **🎯 Next Priority:**
 - **Milestone 2**: Persistence Layer for message durability
