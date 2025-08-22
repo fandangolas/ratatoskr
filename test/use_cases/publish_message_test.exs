@@ -1,7 +1,6 @@
 defmodule Ratatoskr.UseCases.PublishMessageTest do
   use ExUnit.Case, async: true
   alias Ratatoskr.UseCases.PublishMessage
-  alias Ratatoskr.Core.{Message, Topic}
 
   # Mock registry implementation for testing
   defmodule MockRegistry do
@@ -27,7 +26,9 @@ defmodule Ratatoskr.UseCases.PublishMessageTest do
     @behaviour Ratatoskr.Core.Behaviours.Metrics
 
     def increment_counter(_event, _metadata \\ %{}), do: :ok
+    def increment_counter(_event, _amount, _metadata), do: :ok
     def record_histogram(_event, _value, _metadata \\ %{}), do: :ok
+    def observe_histogram(_event, _value, _metadata \\ %{}), do: :ok
     def set_gauge(_event, _value, _metadata \\ %{}), do: :ok
   end
 
