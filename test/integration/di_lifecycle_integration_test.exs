@@ -7,6 +7,9 @@ defmodule Ratatoskr.Integration.DILifecycleIntegrationTest do
   @moduletag :integration
 
   setup do
+    # Ensure the application is started before each test
+    {:ok, _} = Application.ensure_all_started(:ratatoskr)
+    
     # Start a fresh lifecycle manager and registry for each test
     if Process.whereis(Lifecycle) do
       GenServer.stop(Lifecycle)

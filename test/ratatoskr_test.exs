@@ -3,6 +3,12 @@ defmodule RatatoskrTest do
   use ExUnit.Case, async: false
   doctest Ratatoskr
 
+  setup_all do
+    # Ensure the application is started for all tests
+    {:ok, _} = Application.ensure_all_started(:ratatoskr)
+    :ok
+  end
+
   describe "Topic Management" do
     test "creates and lists topics" do
       topic_name = "test_topic_#{:rand.uniform(100_000)}_#{System.system_time(:microsecond)}"
