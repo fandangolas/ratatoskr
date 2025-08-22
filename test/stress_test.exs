@@ -91,7 +91,7 @@ defmodule Ratatoskr.StressTest do
       expected_total = publisher_count * messages_per_publisher
 
       # Spawn concurrent publishers
-      {time_ms, publisher_pids} =
+      {time_ms, _publisher_pids} =
         :timer.tc(fn ->
           for i <- 1..publisher_count do
             spawn_link(fn ->
@@ -157,7 +157,7 @@ defmodule Ratatoskr.StressTest do
                    {:ok, _} = Ratatoskr.create_topic(topic)
 
                    # Spawn subscribers for this topic
-                   for i <- 1..subscribers_per_topic do
+                   for _i <- 1..subscribers_per_topic do
                      spawn_link(fn ->
                        {:ok, _ref} = Ratatoskr.subscribe(topic)
                        # Receive messages
@@ -229,8 +229,8 @@ defmodule Ratatoskr.StressTest do
 
       for cycle <- 1..churn_cycles do
         # Connect subscribers
-        subscribers =
-          for i <- 1..subscribers_per_cycle do
+        _subscribers =
+          for _i <- 1..subscribers_per_cycle do
             spawn_link(fn ->
               {:ok, ref} = Ratatoskr.subscribe(topic_name)
 

@@ -22,7 +22,7 @@ defmodule Ratatoskr.RecoveryTest do
 
       # Create topic and establish baseline
       {:ok, _topic} = Ratatoskr.create_topic(topic_name)
-      {:ok, ref} = Ratatoskr.subscribe(topic_name)
+      {:ok, _ref} = Ratatoskr.subscribe(topic_name)
 
       # Verify topic is working
       {:ok, _} = Ratatoskr.publish(topic_name, %{before: "crash"})
@@ -58,7 +58,7 @@ defmodule Ratatoskr.RecoveryTest do
       assert new_topic_pid != topic_pid
 
       # Should be functional again
-      {:ok, new_ref} = Ratatoskr.subscribe(topic_name)
+      {:ok, _new_ref} = Ratatoskr.subscribe(topic_name)
       {:ok, _} = Ratatoskr.publish(topic_name, %{after: "recovery"})
       assert_receive {:message, message}, 1000
       assert message.payload.after == "recovery"
@@ -166,8 +166,8 @@ defmodule Ratatoskr.RecoveryTest do
       # Create multiple subscriber processes that will crash
       subscriber_count = 10
 
-      crash_subscribers =
-        for i <- 1..subscriber_count do
+      _crash_subscribers =
+        for _i <- 1..subscriber_count do
           spawn_link(fn ->
             {:ok, _ref} = Ratatoskr.subscribe(topic_name)
 
@@ -181,7 +181,7 @@ defmodule Ratatoskr.RecoveryTest do
         end
 
       # Create one healthy subscriber to verify topic still works
-      healthy_subscriber =
+      _healthy_subscriber =
         spawn_link(fn ->
           {:ok, _ref} = Ratatoskr.subscribe(topic_name)
 
@@ -239,7 +239,7 @@ defmodule Ratatoskr.RecoveryTest do
       {:ok, _topic} = Ratatoskr.create_topic(topic_name)
 
       # Create subscriber that processes slowly
-      slow_subscriber =
+      _slow_subscriber =
         spawn_link(fn ->
           {:ok, _ref} = Ratatoskr.subscribe(topic_name)
           process_messages_slowly(0)
@@ -307,7 +307,7 @@ defmodule Ratatoskr.RecoveryTest do
       # Start background publishers
       publisher_count = 5
 
-      publishers =
+      _publishers =
         for i <- 1..publisher_count do
           spawn_link(fn ->
             # 200 messages each
@@ -318,8 +318,8 @@ defmodule Ratatoskr.RecoveryTest do
       # Start background subscribers  
       subscriber_count = 10
 
-      subscribers =
-        for i <- 1..subscriber_count do
+      _subscribers =
+        for _i <- 1..subscriber_count do
           spawn_link(fn ->
             {:ok, _ref} = Ratatoskr.subscribe(topic_name)
             # Expect to receive messages

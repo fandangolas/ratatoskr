@@ -19,8 +19,7 @@ defmodule Ratatoskr.GrpcTest do
     PublishBatchResponse,
     SubscribeRequest,
     UnsubscribeRequest,
-    UnsubscribeResponse,
-    Message
+    UnsubscribeResponse
   }
 
   setup do

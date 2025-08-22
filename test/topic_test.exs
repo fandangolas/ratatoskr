@@ -32,7 +32,7 @@ defmodule Ratatoskr.TopicTest do
 
     test "subscribes processes and receives messages", %{topic_name: topic_name} do
       # Subscribe to the topic
-      assert {:ok, subscription_ref} = TopicServer.subscribe(topic_name, self())
+      assert {:ok, _subscription_ref} = TopicServer.subscribe(topic_name, self())
 
       # Publish a message
       payload = %{data: "test message"}
