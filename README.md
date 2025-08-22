@@ -8,7 +8,7 @@
   Named after the Norse mythology squirrel who carries messages between the eagle at the top of Yggdrasil and the dragon at its roots, Ratatoskr delivers messages reliably across your distributed system.
 
   [![CI](https://github.com/fandangolas/ratatoskr/actions/workflows/ci.yml/badge.svg)](https://github.com/fandangolas/ratatoskr/actions/workflows/ci.yml)
-  [![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)](https://github.com/fandangolas/ratatoskr)
+  [![Coverage](https://img.shields.io/badge/coverage-82%25-brightgreen)](https://github.com/fandangolas/ratatoskr)
   [![Elixir](https://img.shields.io/badge/elixir-1.17.3-purple)](https://elixir-lang.org/)
   [![OTP](https://img.shields.io/badge/otp-27.3.4.2-red)](https://www.erlang.org/)
 </div>
@@ -25,33 +25,50 @@
 
 ## 🚀 Quick Start
 
-```elixir
-# Add to your mix.exs
-def deps do
-  [{:ratatoskr, "~> 0.1.0"}]
-end
+**1. Start the Ratatoskr server:**
+```bash
+# Clone and run the message broker
+git clone https://github.com/fandangolas/ratatoskr.git
+cd ratatoskr
+mix deps.get
+mix run --no-halt
+# Server starts on localhost:50051
+```
 
-# Start the broker
-Application.ensure_all_started(:ratatoskr)
+**2. Connect from Python (or any gRPC-supported language):**
+
+```python
+# Install: pip install grpcio grpcio-tools
+import grpc
+import ratatoskr_pb2_grpc as pb_grpc
+import ratatoskr_pb2 as pb
+import json
+
+# Connect to Ratatoskr
+channel = grpc.insecure_channel('localhost:50051')
+client = pb_grpc.MessageBrokerStub(channel)
 
 # Create a topic
-{:ok, "orders"} = Ratatoskr.create_topic("orders")
-
-# Subscribe to messages
-{:ok, ref} = Ratatoskr.subscribe("orders")
+client.CreateTopic(pb.CreateTopicRequest(name="orders"))
 
 # Publish a message
-{:ok, message_id} = Ratatoskr.publish("orders", %{
-  id: 123,
-  amount: 99.90,
-  currency: "USD"
-})
+order_data = json.dumps({"id": 123, "amount": 99.90, "currency": "USD"})
+response = client.Publish(pb.PublishRequest(
+    topic="orders",
+    payload=order_data.encode(),
+    metadata={"type": "order", "source": "api"}
+))
+print(f"Published message: {response.message_id}")
 
-# Receive messages
-receive do
-  {:message, message} -> 
-    IO.inspect(message.payload)
-end
+# Subscribe to messages (streaming)
+stream = client.Subscribe(pb.SubscribeRequest(
+    topic="orders",
+    subscriber_id="my-service"
+))
+
+for message in stream:
+    order = json.loads(message.payload.decode())
+    print(f"Received order: {order}")
 ```
 
 ## 🔌 gRPC Integration
@@ -131,7 +148,7 @@ Built with modern Elixir tooling and best practices:
 
 - **Code Quality**: Credo static analysis with strict rules
 - **Formatting**: Automatic code formatting enforcement
-- **Coverage**: 94%+ test coverage on core functionality
+- **Coverage**: 82%+ test coverage on core business logic
 - **CI/CD**: GitHub Actions with comprehensive validation
 - **Documentation**: Full API documentation with examples
 
