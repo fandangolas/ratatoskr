@@ -1,6 +1,6 @@
 defmodule Ratatoskr.Core.TopicEntityTest do
   use ExUnit.Case, async: true
-  alias Ratatoskr.Core.{Topic, Message}
+  alias Ratatoskr.Core.Logic.{Topic, Message}
 
   describe "Topic.new/2" do
     test "creates a valid topic with default configuration" do

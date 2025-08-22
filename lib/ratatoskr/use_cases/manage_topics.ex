@@ -5,7 +5,7 @@ defmodule Ratatoskr.UseCases.ManageTopics do
   Handles topic creation, deletion, and configuration management.
   """
 
-  alias Ratatoskr.Core.{Topic}
+  alias Ratatoskr.Core.Logic.Topic
   alias Ratatoskr.Servers.TopicServer
 
   @type deps :: %{

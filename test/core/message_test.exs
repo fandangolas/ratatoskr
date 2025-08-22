@@ -1,6 +1,6 @@
 defmodule Ratatoskr.Core.MessageTest do
   use ExUnit.Case, async: true
-  alias Ratatoskr.Core.Message
+  alias Ratatoskr.Core.Logic.Message
 
   describe "Message.new/3" do
     test "creates a valid message with required fields" do

@@ -9,7 +9,7 @@ defmodule Ratatoskr.Servers.TopicServer do
   use GenServer
   require Logger
 
-  alias Ratatoskr.Core.{Topic, Message, Subscription}
+  alias Ratatoskr.Core.Logic.{Topic, Message, Subscription}
 
   @type state :: %{
           topic: Topic.t(),

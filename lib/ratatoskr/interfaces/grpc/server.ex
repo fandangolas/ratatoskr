@@ -31,7 +31,7 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
 
   alias Ratatoskr.UseCases.{PublishMessage, SubscribeToTopic, ManageTopics}
   alias Ratatoskr.Interfaces.Grpc.Mappers
-  alias Ratatoskr.Core.Subscription
+  alias Ratatoskr.Core.Logic.Subscription
 
   # Dependency injection - will be configured at startup
   @deps %{

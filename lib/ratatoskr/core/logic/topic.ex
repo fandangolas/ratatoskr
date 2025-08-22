@@ -1,4 +1,4 @@
-defmodule Ratatoskr.Core.Topic do
+defmodule Ratatoskr.Core.Logic.Topic do
   @moduledoc """
   Core domain entity representing a topic in the message broker.
 
@@ -6,15 +6,10 @@ defmodule Ratatoskr.Core.Topic do
   and message routing logic.
   """
 
-  alias Ratatoskr.Core.{Message}
+  alias Ratatoskr.Core.Logic.Message
+  alias Ratatoskr.Core.Models.Topic, as: TopicModel
 
-  @type t :: %__MODULE__{
-          name: String.t(),
-          partitions: pos_integer(),
-          max_subscribers: pos_integer(),
-          config: map(),
-          created_at: DateTime.t()
-        }
+  @type t :: TopicModel.t()
 
   defstruct [
     :name,

@@ -1,24 +1,13 @@
-defmodule Ratatoskr.Core.Subscription do
+defmodule Ratatoskr.Core.Logic.Subscription do
   @moduledoc """
   Core domain entity representing a subscription to a topic.
 
   Manages subscriber lifecycle, delivery tracking, and subscription metadata.
   """
 
-  @type t :: %__MODULE__{
-          id: reference(),
-          topic: String.t(),
-          subscriber_pid: pid(),
-          subscriber_id: String.t() | nil,
-          partition: non_neg_integer() | nil,
-          filter: (term() -> boolean()) | nil,
-          created_at: DateTime.t(),
-          last_message_at: DateTime.t() | nil,
-          message_count: non_neg_integer(),
-          metadata: map(),
-          status: :active | :paused | :cancelled,
-          options: keyword()
-        }
+  alias Ratatoskr.Core.Models.Subscription, as: SubscriptionModel
+
+  @type t :: SubscriptionModel.t()
 
   defstruct [
     :id,
@@ -106,8 +95,8 @@ defmodule Ratatoskr.Core.Subscription do
   @doc """
   Checks if a message should be delivered to this subscription.
   """
-  @spec should_deliver?(t(), Ratatoskr.Core.Message.t()) :: boolean()
-  def should_deliver?(%__MODULE__{} = subscription, %Ratatoskr.Core.Message{} = message) do
+  @spec should_deliver?(t(), Ratatoskr.Core.Logic.Message.t()) :: boolean()
+  def should_deliver?(%__MODULE__{} = subscription, %Ratatoskr.Core.Logic.Message{} = message) do
     active?(subscription) and
       partition_match?(subscription, message) and
       filter_match?(subscription, message)

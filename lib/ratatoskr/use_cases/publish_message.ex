@@ -6,7 +6,7 @@ defmodule Ratatoskr.UseCases.PublishMessage do
   validation, routing, persistence, and delivery to subscribers.
   """
 
-  alias Ratatoskr.Core.{Message}
+  alias Ratatoskr.Core.Logic.Message
 
   @type deps :: %{
           registry: module(),

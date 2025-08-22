@@ -6,7 +6,7 @@ defmodule Ratatoskr.Interfaces.Grpc.Mappers do
   protocol buffer generated types.
   """
 
-  alias Ratatoskr.Core.Message, as: DomainMessage
+  alias Ratatoskr.Core.Logic.Message, as: DomainMessage
   alias Ratatoskr.Grpc.Message, as: GrpcMessage
 
   @doc """

@@ -10,11 +10,11 @@ defmodule Ratatoskr.Core.Behaviours do
     @moduledoc """
     Storage behavior for message persistence.
     """
-    @callback persist_message(topic :: binary(), message :: Ratatoskr.Core.Message.t()) ::
+    @callback persist_message(topic :: binary(), message :: Ratatoskr.Core.Logic.Message.t()) ::
                 {:ok, offset :: integer()} | {:error, reason :: term()}
 
     @callback load_messages(topic :: binary(), offset :: integer(), limit :: integer()) ::
-                {:ok, [Ratatoskr.Core.Message.t()]} | {:error, reason :: term()}
+                {:ok, [Ratatoskr.Core.Logic.Message.t()]} | {:error, reason :: term()}
 
     @callback delete_messages(topic :: binary(), before_offset :: integer()) ::
                 :ok | {:error, reason :: term()}

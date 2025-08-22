@@ -1,6 +1,6 @@
 defmodule Ratatoskr.Core.TopicTest do
   use ExUnit.Case, async: true
-  alias Ratatoskr.Core.{Message, Topic}
+  alias Ratatoskr.Core.Logic.{Message, Topic}
   alias Ratatoskr.Servers.TopicServer
 
   setup do
@@ -37,7 +37,7 @@ defmodule Ratatoskr.Core.TopicTest do
       topic_pid: topic_pid
     } do
       # Create subscription
-      {:ok, subscription} = Ratatoskr.Core.Subscription.new(topic_name, self())
+      {:ok, subscription} = Ratatoskr.Core.Logic.Subscription.new(topic_name, self())
       assert {:ok, _subscription_ref} = TopicServer.subscribe_to_server(topic_pid, subscription)
 
       # Publish a message
@@ -54,7 +54,7 @@ defmodule Ratatoskr.Core.TopicTest do
       subscribers =
         for _ <- 1..3 do
           spawn_link(fn ->
-            {:ok, subscription} = Ratatoskr.Core.Subscription.new(topic_name, self())
+            {:ok, subscription} = Ratatoskr.Core.Logic.Subscription.new(topic_name, self())
             {:ok, _ref} = TopicServer.subscribe_to_server(topic_pid, subscription)
 
             receive do
@@ -81,7 +81,7 @@ defmodule Ratatoskr.Core.TopicTest do
 
     test "unsubscribes processes correctly", %{topic_name: topic_name, topic_pid: topic_pid} do
       # Subscribe
-      {:ok, subscription} = Ratatoskr.Core.Subscription.new(topic_name, self())
+      {:ok, subscription} = Ratatoskr.Core.Logic.Subscription.new(topic_name, self())
       {:ok, subscription_ref} = TopicServer.subscribe_to_server(topic_pid, subscription)
 
       # Unsubscribe
@@ -103,7 +103,7 @@ defmodule Ratatoskr.Core.TopicTest do
       # Create a subscriber process that will die
       subscriber_pid =
         spawn(fn ->
-          {:ok, subscription} = Ratatoskr.Core.Subscription.new(topic_name, self())
+          {:ok, subscription} = Ratatoskr.Core.Logic.Subscription.new(topic_name, self())
           {:ok, _ref} = TopicServer.subscribe_to_server(topic_pid, subscription)
 
           receive do
@@ -137,7 +137,7 @@ defmodule Ratatoskr.Core.TopicTest do
              } = stats
 
       # Add a subscriber and message
-      {:ok, subscription} = Ratatoskr.Core.Subscription.new(topic_name, self())
+      {:ok, subscription} = Ratatoskr.Core.Logic.Subscription.new(topic_name, self())
       {:ok, _ref} = TopicServer.subscribe_to_server(topic_pid, subscription)
       {:ok, message} = Message.new(topic_name, %{data: "test"})
       {:ok, _message_id} = TopicServer.publish_to_server(topic_pid, message)
@@ -161,7 +161,7 @@ defmodule Ratatoskr.Core.TopicTest do
 
     test "preserves message order (FIFO)", %{topic_name: topic_name, topic_pid: topic_pid} do
       # Subscribe first
-      {:ok, subscription} = Ratatoskr.Core.Subscription.new(topic_name, self())
+      {:ok, subscription} = Ratatoskr.Core.Logic.Subscription.new(topic_name, self())
       {:ok, _ref} = TopicServer.subscribe_to_server(topic_pid, subscription)
 
       # Publish multiple messages quickly

@@ -1,4 +1,4 @@
-defmodule Ratatoskr.Core.Message do
+defmodule Ratatoskr.Core.Logic.Message do
   @moduledoc """
   Core domain entity representing a message in the Ratatoskr message broker.
 
@@ -6,15 +6,10 @@ defmodule Ratatoskr.Core.Message do
   Contains business rules and validations for messages.
   """
 
-  @type t :: %__MODULE__{
-          id: String.t(),
-          topic: String.t(),
-          payload: term(),
-          timestamp: DateTime.t(),
-          metadata: map(),
-          partition_key: String.t() | nil
-        }
+  alias Ratatoskr.Core.Models.Message, as: MessageModel
 
+  @type t :: MessageModel.t()
+  
   defstruct [
     :id,
     :topic,

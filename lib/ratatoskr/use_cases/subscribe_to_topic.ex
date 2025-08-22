@@ -6,7 +6,7 @@ defmodule Ratatoskr.UseCases.SubscribeToTopic do
   validation, topic discovery, subscriber registration, and delivery setup.
   """
 
-  alias Ratatoskr.Core.{Subscription}
+  alias Ratatoskr.Core.Logic.Subscription
 
   @type deps :: %{
           registry: module(),

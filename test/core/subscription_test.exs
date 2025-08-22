@@ -1,6 +1,6 @@
 defmodule Ratatoskr.Core.SubscriptionTest do
   use ExUnit.Case, async: true
-  alias Ratatoskr.Core.{Subscription, Message}
+  alias Ratatoskr.Core.Logic.{Subscription, Message}
 
   describe "Subscription.new/3" do
     test "creates a valid subscription with default options" do
