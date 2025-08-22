@@ -8,7 +8,7 @@
   Named after the Norse mythology squirrel who carries messages between the eagle at the top of Yggdrasil and the dragon at its roots, Ratatoskr delivers messages reliably across your distributed system.
 
   [![CI](https://github.com/fandangolas/ratatoskr/actions/workflows/ci.yml/badge.svg)](https://github.com/fandangolas/ratatoskr/actions/workflows/ci.yml)
-  [![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen)](https://github.com/fandangolas/ratatoskr)
+  [![Coverage](https://img.shields.io/badge/coverage-82%25-brightgreen)](https://github.com/fandangolas/ratatoskr)
   [![Elixir](https://img.shields.io/badge/elixir-1.17.3-purple)](https://elixir-lang.org/)
   [![OTP](https://img.shields.io/badge/otp-27.3.4.2-red)](https://www.erlang.org/)
 </div>
@@ -131,7 +131,7 @@ Built with modern Elixir tooling and best practices:
 
 - **Code Quality**: Credo static analysis with strict rules
 - **Formatting**: Automatic code formatting enforcement
-- **Coverage**: 94%+ test coverage on core functionality
+- **Coverage**: 82%+ test coverage on core business logic
 - **CI/CD**: GitHub Actions with comprehensive validation
 - **Documentation**: Full API documentation with examples
 
