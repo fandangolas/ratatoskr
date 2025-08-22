@@ -1,6 +1,8 @@
 defmodule Ratatoskr.Infrastructure.DI.LifecycleTest do
   use ExUnit.Case, async: false
   alias Ratatoskr.Infrastructure.DI.Lifecycle
+  
+  import ApplicationHelper
 
   # Test GenServer for singleton testing
   defmodule TestSingleton do
@@ -31,24 +33,26 @@ defmodule Ratatoskr.Infrastructure.DI.LifecycleTest do
   end
 
   setup do
-    # Start a fresh lifecycle manager for each test
-    if Process.whereis(Lifecycle) do
-      Supervisor.terminate_child(Ratatoskr.ApplicationSupervisor, Lifecycle)
+    # Ensure application is running so we have a proper context
+    assert :ok = ensure_application_running()
+    assert :ok = wait_for_application_processes()
+    
+    # Clean up any existing managed dependencies from the lifecycle manager
+    # but don't stop the lifecycle manager itself
+    try do
+      Lifecycle.shutdown()
+    catch
+      # If no dependencies are registered, shutdown might return an error
+      _, _ -> :ok
     end
 
-    {:ok, _pid} = Lifecycle.start_link()
-
     on_exit(fn ->
-      pid = Process.whereis(Lifecycle)
-
-      if pid && Process.alive?(pid) do
-        try do
-          Lifecycle.shutdown()
-          GenServer.stop(Lifecycle)
-        catch
-          # Process already dead
-          :exit, _ -> :ok
-        end
+      # Clean up test dependencies but leave the lifecycle manager running
+      try do
+        Lifecycle.shutdown()
+      catch
+        # If no dependencies are registered, shutdown might return an error
+        _, _ -> :ok
       end
     end)
 

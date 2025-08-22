@@ -2,26 +2,27 @@ defmodule Ratatoskr.Servers.ApplicationTest do
   use ExUnit.Case, async: false
 
   alias Ratatoskr.Infrastructure.DI.{Container, Lifecycle}
+  
+  import ApplicationHelper
 
   @moduletag :application
 
   describe "application startup and shutdown" do
     setup do
-      # Ensure clean state
-      if Application.get_application(:ratatoskr) do
-        Application.stop(:ratatoskr)
-      end
-
-      on_exit(fn ->
-        if Application.get_application(:ratatoskr) do
-          Application.stop(:ratatoskr)
-        end
-      end)
+      # Ensure application is available for tests that need it
+      # Individual tests will manage start/stop as needed
+      :ok
     end
 
     test "lifecycle manager starts with application" do
+      # Prepare for clean application lifecycle test
+      prepare_for_application_lifecycle_test()
+
       # Start application
       {:ok, _pid} = Application.ensure_all_started(:ratatoskr)
+
+      # Wait for application processes to be ready
+      assert :ok = wait_for_application_processes()
 
       # Lifecycle manager should be running
       lifecycle_pid = Process.whereis(Lifecycle)
@@ -42,6 +43,9 @@ defmodule Ratatoskr.Servers.ApplicationTest do
     end
 
     test "lifecycle configuration is processed on startup" do
+      # Prepare for clean application start
+      prepare_for_application_lifecycle_test()
+      
       # Set up test configuration
       original_config = Application.get_env(:ratatoskr, :lifecycle, [])
 
@@ -56,6 +60,7 @@ defmodule Ratatoskr.Servers.ApplicationTest do
       try do
         # Start application
         {:ok, _pid} = Application.ensure_all_started(:ratatoskr)
+        assert :ok = wait_for_application_processes()
 
         # Manually call configure_lifecycle since app was already started
         Container.configure_lifecycle()
@@ -70,8 +75,12 @@ defmodule Ratatoskr.Servers.ApplicationTest do
     end
 
     test "dependencies are shut down gracefully on application stop" do
+      # Prepare for application lifecycle test
+      prepare_for_application_lifecycle_test()
+
       # Start application
       {:ok, _pid} = Application.ensure_all_started(:ratatoskr)
+      assert :ok = wait_for_application_processes()
 
       # Register and create a singleton
       assert :ok =
@@ -92,9 +101,17 @@ defmodule Ratatoskr.Servers.ApplicationTest do
 
       # Agent should be stopped
       refute Process.alive?(agent)
+
+      # IMPORTANT: Ensure application is available for subsequent tests
+      assert :ok = cleanup_application_state()
     end
 
     test "application can restart after shutdown" do
+      # Ensure clean start
+      if Application.get_application(:ratatoskr) do
+        Application.stop(:ratatoskr)
+      end
+
       # Start application
       {:ok, _pid} = Application.ensure_all_started(:ratatoskr)
 
@@ -114,9 +131,14 @@ defmodule Ratatoskr.Servers.ApplicationTest do
       agent = Container.get_singleton(:restart_test)
       assert is_pid(agent)
       assert Agent.get(agent, & &1) == :restarted
+
+      # Note: Application is already started, so it's ready for next tests
     end
 
     test "handles missing lifecycle configuration gracefully" do
+      # Prepare for application lifecycle test
+      prepare_for_application_lifecycle_test()
+
       # Remove lifecycle configuration
       original_config = Application.get_env(:ratatoskr, :lifecycle, [])
       Application.delete_env(:ratatoskr, :lifecycle)
@@ -124,6 +146,7 @@ defmodule Ratatoskr.Servers.ApplicationTest do
       try do
         # Should still start without crashing
         {:ok, _pid} = Application.ensure_all_started(:ratatoskr)
+        assert :ok = wait_for_application_processes()
 
         # Lifecycle manager should still work
         assert :ok =
@@ -142,11 +165,10 @@ defmodule Ratatoskr.Servers.ApplicationTest do
 
   describe "integration with other infrastructure components" do
     setup do
-      {:ok, _pid} = Application.ensure_all_started(:ratatoskr)
-
-      on_exit(fn ->
-        Application.stop(:ratatoskr)
-      end)
+      # Ensure application and critical processes are available for these tests
+      assert :ok = ensure_application_running()
+      assert :ok = wait_for_application_processes()
+      :ok
     end
 
     test "lifecycle manager and registry work together" do

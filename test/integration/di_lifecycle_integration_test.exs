@@ -3,41 +3,23 @@ defmodule Ratatoskr.Integration.DILifecycleIntegrationTest do
 
   alias Ratatoskr.Infrastructure.DI.{Container, Lifecycle}
   alias Ratatoskr.Infrastructure.Registry.ProcessRegistry
+  
+  import ApplicationHelper
 
   @moduletag :integration
 
   setup do
-    # Ensure the application is started before each test
-    {:ok, _} = Application.ensure_all_started(:ratatoskr)
-
-    # Start a fresh lifecycle manager and registry for each test
-    if Process.whereis(Lifecycle) do
-      GenServer.stop(Lifecycle)
-    end
-
-    # Check the actual Registry process, not the ProcessRegistry module
-    registry_pid = Process.whereis(Ratatoskr.Registry)
-
-    if registry_pid do
-      GenServer.stop(registry_pid)
-    end
-
-    case ProcessRegistry.start_link([]) do
-      {:ok, _registry} -> :ok
-      {:error, {:already_started, _pid}} -> :ok
-    end
-
-    case Lifecycle.start_link() do
-      {:ok, _lifecycle} -> :ok
-      {:error, {:already_started, _pid}} -> :ok
-    end
+    # Ensure the application and critical processes are available
+    assert :ok = ensure_application_running()
+    assert :ok = wait_for_application_processes()
 
     on_exit(fn ->
       try do
+        # Just shutdown managed dependencies, don't stop core processes
         Container.shutdown()
-        GenServer.stop(Lifecycle)
-        registry_pid = Process.whereis(Ratatoskr.Registry)
-        if registry_pid, do: GenServer.stop(registry_pid)
+        
+        # Don't manually stop Lifecycle or Registry - let application manage them
+        # This prevents interference with other tests
       catch
         :exit, _ -> :ok
       end
