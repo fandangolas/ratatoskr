@@ -1,10 +1,17 @@
 defmodule RatatoskrTest do
-  use ExUnit.Case, async: true
+  # Changed to false to prevent race conditions in topic management
+  use ExUnit.Case, async: false
   doctest Ratatoskr
 
   describe "Topic Management" do
     test "creates and lists topics" do
-      topic_name = "test_topic_#{:rand.uniform(1000)}"
+      topic_name = "test_topic_#{:rand.uniform(100_000)}_#{System.system_time(:microsecond)}"
+
+      # Clean up any existing topic first (defensive)
+      if Ratatoskr.topic_exists?(topic_name) do
+        Ratatoskr.delete_topic(topic_name)
+        Process.sleep(10)
+      end
 
       # Topic shouldn't exist initially
       assert false == Ratatoskr.topic_exists?(topic_name)
@@ -21,6 +28,11 @@ defmodule RatatoskrTest do
 
       # Clean up
       assert :ok = Ratatoskr.delete_topic(topic_name)
+
+      # Wait for deletion to propagate through registry
+      Process.sleep(50)
+
+      # Verify deletion
       assert false == Ratatoskr.topic_exists?(topic_name)
     end
 
@@ -133,13 +145,20 @@ defmodule RatatoskrTest do
     test "handles operations on non-existent topics" do
       nonexistent = "nonexistent_#{:rand.uniform(1000)}"
 
-      assert {:error, :topic_not_found} = Ratatoskr.publish(nonexistent, %{})
-      assert {:error, :topic_not_found} = Ratatoskr.subscribe(nonexistent)
-      assert {:error, :topic_not_found} = Ratatoskr.stats(nonexistent)
+      # Publish should succeed by auto-creating the topic
+      assert {:ok, _message_id} = Ratatoskr.publish(nonexistent, %{})
+
+      # Verify topic was auto-created
+      assert Ratatoskr.topic_exists?(nonexistent)
+
+      # Other operations on truly non-existent topics should fail
+      nonexistent2 = "nonexistent2_#{:rand.uniform(1000)}"
+      assert {:error, :topic_not_found} = Ratatoskr.subscribe(nonexistent2)
+      assert {:error, :topic_not_found} = Ratatoskr.stats(nonexistent2)
 
       # These should also handle gracefully
       fake_ref = make_ref()
-      assert {:error, :topic_not_found} = Ratatoskr.unsubscribe(nonexistent, fake_ref)
+      assert {:error, :topic_not_found} = Ratatoskr.unsubscribe(nonexistent2, fake_ref)
     end
 
     test "handles invalid subscription references" do

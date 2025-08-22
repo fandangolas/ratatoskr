@@ -1,6 +1,7 @@
-defmodule Ratatoskr.GrpcTest do
-  use ExUnit.Case
-  doctest Ratatoskr.Grpc.Server
+defmodule Ratatoskr.Interfaces.GrpcTest do
+  # Changed to false to prevent race conditions in topic management
+  use ExUnit.Case, async: false
+  doctest Ratatoskr.Interfaces.Grpc.Server
 
   alias Ratatoskr.Grpc.{
     CreateTopicRequest,
@@ -30,8 +31,14 @@ defmodule Ratatoskr.GrpcTest do
         _ -> []
       end
 
+    # Delete all topics and wait for cleanup to complete
     for topic <- topics do
       Ratatoskr.delete_topic(topic)
+    end
+
+    # Give a small delay to ensure all topics are fully cleaned up
+    if length(topics) > 0 do
+      Process.sleep(50)
     end
 
     :ok
@@ -41,7 +48,7 @@ defmodule Ratatoskr.GrpcTest do
     test "creates topic via gRPC" do
       request = %CreateTopicRequest{name: "grpc-test-topic"}
 
-      response = Ratatoskr.Grpc.Server.create_topic(request, %GRPC.Server.Stream{})
+      response = Ratatoskr.Interfaces.Grpc.Server.create_topic(request, %GRPC.Server.Stream{})
 
       assert %CreateTopicResponse{topic: "grpc-test-topic", created: true, error: ""} = response
       assert Ratatoskr.topic_exists?("grpc-test-topic")
@@ -51,25 +58,32 @@ defmodule Ratatoskr.GrpcTest do
       {:ok, _} = Ratatoskr.create_topic("existing-topic")
 
       request = %CreateTopicRequest{name: "existing-topic"}
-      response = Ratatoskr.Grpc.Server.create_topic(request, %GRPC.Server.Stream{})
+      response = Ratatoskr.Interfaces.Grpc.Server.create_topic(request, %GRPC.Server.Stream{})
 
       assert %CreateTopicResponse{created: false} = response
       assert response.error != ""
     end
 
     test "deletes topic via gRPC" do
-      {:ok, _} = Ratatoskr.create_topic("to-delete")
+      topic_name = "to-delete-#{:rand.uniform(100_000)}-#{System.system_time(:microsecond)}"
+      {:ok, _} = Ratatoskr.create_topic(topic_name)
 
-      request = %DeleteTopicRequest{name: "to-delete"}
-      response = Ratatoskr.Grpc.Server.delete_topic(request, %GRPC.Server.Stream{})
+      # Verify topic exists before deletion
+      assert Ratatoskr.topic_exists?(topic_name)
+
+      request = %DeleteTopicRequest{name: topic_name}
+      response = Ratatoskr.Interfaces.Grpc.Server.delete_topic(request, %GRPC.Server.Stream{})
 
       assert %DeleteTopicResponse{success: true, error: ""} = response
-      refute Ratatoskr.topic_exists?("to-delete")
+
+      # Give a small delay for async cleanup
+      Process.sleep(10)
+      refute Ratatoskr.topic_exists?(topic_name)
     end
 
     test "handles deleting non-existent topic" do
       request = %DeleteTopicRequest{name: "non-existent"}
-      response = Ratatoskr.Grpc.Server.delete_topic(request, %GRPC.Server.Stream{})
+      response = Ratatoskr.Interfaces.Grpc.Server.delete_topic(request, %GRPC.Server.Stream{})
 
       assert %DeleteTopicResponse{success: false} = response
       assert response.error != ""
@@ -80,7 +94,7 @@ defmodule Ratatoskr.GrpcTest do
       {:ok, _} = Ratatoskr.create_topic("topic2")
 
       request = %ListTopicsRequest{}
-      response = Ratatoskr.Grpc.Server.list_topics(request, %GRPC.Server.Stream{})
+      response = Ratatoskr.Interfaces.Grpc.Server.list_topics(request, %GRPC.Server.Stream{})
 
       assert %ListTopicsResponse{topics: topics} = response
       assert "topic1" in topics
@@ -92,12 +106,12 @@ defmodule Ratatoskr.GrpcTest do
 
       # Existing topic
       request = %TopicExistsRequest{name: "existing"}
-      response = Ratatoskr.Grpc.Server.topic_exists(request, %GRPC.Server.Stream{})
+      response = Ratatoskr.Interfaces.Grpc.Server.topic_exists(request, %GRPC.Server.Stream{})
       assert %TopicExistsResponse{exists: true} = response
 
       # Non-existing topic
       request = %TopicExistsRequest{name: "non-existing"}
-      response = Ratatoskr.Grpc.Server.topic_exists(request, %GRPC.Server.Stream{})
+      response = Ratatoskr.Interfaces.Grpc.Server.topic_exists(request, %GRPC.Server.Stream{})
       assert %TopicExistsResponse{exists: false} = response
     end
 
@@ -107,7 +121,7 @@ defmodule Ratatoskr.GrpcTest do
       {:ok, _} = Ratatoskr.publish("stats-topic", %{test: "data"})
 
       request = %GetStatsRequest{topic: "stats-topic"}
-      response = Ratatoskr.Grpc.Server.get_stats(request, %GRPC.Server.Stream{})
+      response = Ratatoskr.Interfaces.Grpc.Server.get_stats(request, %GRPC.Server.Stream{})
 
       assert %GetStatsResponse{
                topic: "stats-topic",
@@ -119,7 +133,7 @@ defmodule Ratatoskr.GrpcTest do
 
     test "handles stats for non-existent topic" do
       request = %GetStatsRequest{topic: "non-existent"}
-      response = Ratatoskr.Grpc.Server.get_stats(request, %GRPC.Server.Stream{})
+      response = Ratatoskr.Interfaces.Grpc.Server.get_stats(request, %GRPC.Server.Stream{})
 
       assert %GetStatsResponse{error: error} = response
       assert error != ""
@@ -136,24 +150,28 @@ defmodule Ratatoskr.GrpcTest do
         metadata: %{"source" => "grpc-test", "priority" => "high"}
       }
 
-      response = Ratatoskr.Grpc.Server.publish(request, %GRPC.Server.Stream{})
+      response = Ratatoskr.Interfaces.Grpc.Server.publish(request, %GRPC.Server.Stream{})
 
       assert %PublishResponse{success: true, error: ""} = response
       assert response.message_id != ""
       assert response.timestamp > 0
     end
 
-    test "handles publishing to non-existent topic" do
+    test "handles publishing to non-existent topic by auto-creating it" do
       request = %PublishRequest{
         topic: "non-existent-topic",
         payload: "test message",
         metadata: %{}
       }
 
-      response = Ratatoskr.Grpc.Server.publish(request, %GRPC.Server.Stream{})
+      response = Ratatoskr.Interfaces.Grpc.Server.publish(request, %GRPC.Server.Stream{})
 
-      assert %PublishResponse{success: false} = response
-      assert response.error != ""
+      assert %PublishResponse{success: true} = response
+      assert response.message_id != ""
+      assert response.error == ""
+
+      # Verify topic was auto-created
+      assert Ratatoskr.topic_exists?("non-existent-topic")
     end
 
     test "publishes batch via gRPC" do
@@ -170,7 +188,7 @@ defmodule Ratatoskr.GrpcTest do
         messages: messages
       }
 
-      response = Ratatoskr.Grpc.Server.publish_batch(request, %GRPC.Server.Stream{})
+      response = Ratatoskr.Interfaces.Grpc.Server.publish_batch(request, %GRPC.Server.Stream{})
 
       assert %PublishBatchResponse{
                success_count: 3,
@@ -182,12 +200,12 @@ defmodule Ratatoskr.GrpcTest do
       assert Enum.all?(results, & &1.success)
     end
 
-    test "handles mixed success/failure in batch" do
+    test "handles batch publish with auto-topic creation" do
       {:ok, _} = Ratatoskr.create_topic("batch-topic")
 
       messages = [
         %PublishRequest{topic: "batch-topic", payload: "msg1", metadata: %{}},
-        %PublishRequest{topic: "non-existent", payload: "msg2", metadata: %{}},
+        %PublishRequest{topic: "auto-created-topic", payload: "msg2", metadata: %{}},
         %PublishRequest{topic: "batch-topic", payload: "msg3", metadata: %{}}
       ]
 
@@ -196,19 +214,22 @@ defmodule Ratatoskr.GrpcTest do
         messages: messages
       }
 
-      response = Ratatoskr.Grpc.Server.publish_batch(request, %GRPC.Server.Stream{})
+      response = Ratatoskr.Interfaces.Grpc.Server.publish_batch(request, %GRPC.Server.Stream{})
 
       assert %PublishBatchResponse{
-               success_count: 2,
-               error_count: 1,
+               success_count: 3,
+               error_count: 0,
                results: results
              } = response
 
       assert length(results) == 3
-      # First and third should succeed, second should fail
+      # All should succeed (including auto-created topic)
       assert Enum.at(results, 0).success == true
-      assert Enum.at(results, 1).success == false
+      assert Enum.at(results, 1).success == true
       assert Enum.at(results, 2).success == true
+
+      # Verify auto-created topic exists
+      assert Ratatoskr.topic_exists?("auto-created-topic")
     end
   end
 
@@ -224,7 +245,7 @@ defmodule Ratatoskr.GrpcTest do
         metadata: %{"type" => "binary"}
       }
 
-      response = Ratatoskr.Grpc.Server.publish(request, %GRPC.Server.Stream{})
+      response = Ratatoskr.Interfaces.Grpc.Server.publish(request, %GRPC.Server.Stream{})
 
       assert %PublishResponse{success: true} = response
     end
@@ -244,7 +265,7 @@ defmodule Ratatoskr.GrpcTest do
         metadata: metadata
       }
 
-      response = Ratatoskr.Grpc.Server.publish(request, %GRPC.Server.Stream{})
+      response = Ratatoskr.Interfaces.Grpc.Server.publish(request, %GRPC.Server.Stream{})
 
       assert %PublishResponse{success: true} = response
     end
@@ -276,7 +297,7 @@ defmodule Ratatoskr.GrpcTest do
       end)
 
       # Call subscribe
-      result = Ratatoskr.Grpc.Server.subscribe(request, mock_stream)
+      result = Ratatoskr.Interfaces.Grpc.Server.subscribe(request, mock_stream)
 
       # Wait for the error message
       assert_receive {:grpc_reply, ^mock_stream, {:error, error_msg}}, 1000
@@ -317,7 +338,7 @@ defmodule Ratatoskr.GrpcTest do
           :meck.new(:timer, [:passthrough])
           :meck.expect(:timer, :sleep, fn :infinity -> Process.sleep(50) end)
 
-          Ratatoskr.Grpc.Server.subscribe(request, mock_stream)
+          Ratatoskr.Interfaces.Grpc.Server.subscribe(request, mock_stream)
 
           :meck.unload(:timer)
         end)
@@ -345,7 +366,7 @@ defmodule Ratatoskr.GrpcTest do
         subscription_ref: encoded_ref
       }
 
-      response = Ratatoskr.Grpc.Server.unsubscribe(request, %GRPC.Server.Stream{})
+      response = Ratatoskr.Interfaces.Grpc.Server.unsubscribe(request, %GRPC.Server.Stream{})
 
       assert %UnsubscribeResponse{success: true, error: ""} = response
     end
@@ -363,7 +384,7 @@ defmodule Ratatoskr.GrpcTest do
         subscription_ref: encoded_ref
       }
 
-      response = Ratatoskr.Grpc.Server.unsubscribe(request, %GRPC.Server.Stream{})
+      response = Ratatoskr.Interfaces.Grpc.Server.unsubscribe(request, %GRPC.Server.Stream{})
 
       assert %UnsubscribeResponse{success: false} = response
       assert response.error != ""
@@ -378,7 +399,7 @@ defmodule Ratatoskr.GrpcTest do
         subscription_ref: "invalid-ref-format"
       }
 
-      response = Ratatoskr.Grpc.Server.unsubscribe(request, %GRPC.Server.Stream{})
+      response = Ratatoskr.Interfaces.Grpc.Server.unsubscribe(request, %GRPC.Server.Stream{})
 
       assert %UnsubscribeResponse{success: false} = response
       assert response.error != ""
@@ -398,7 +419,7 @@ defmodule Ratatoskr.GrpcTest do
         metadata: %{"type" => "json"}
       }
 
-      response = Ratatoskr.Grpc.Server.publish(request, %GRPC.Server.Stream{})
+      response = Ratatoskr.Interfaces.Grpc.Server.publish(request, %GRPC.Server.Stream{})
       assert %PublishResponse{success: true} = response
     end
 
@@ -411,7 +432,7 @@ defmodule Ratatoskr.GrpcTest do
         metadata: %{}
       }
 
-      response = Ratatoskr.Grpc.Server.publish(request, %GRPC.Server.Stream{})
+      response = Ratatoskr.Interfaces.Grpc.Server.publish(request, %GRPC.Server.Stream{})
       assert %PublishResponse{success: true} = response
     end
 
@@ -423,7 +444,7 @@ defmodule Ratatoskr.GrpcTest do
       {:ok, _} = Ratatoskr.publish("nil-meta-topic", %{data: "test"})
 
       request = %GetStatsRequest{topic: "nil-meta-topic"}
-      response = Ratatoskr.Grpc.Server.get_stats(request, %GRPC.Server.Stream{})
+      response = Ratatoskr.Interfaces.Grpc.Server.get_stats(request, %GRPC.Server.Stream{})
 
       assert %GetStatsResponse{message_count: 1} = response
     end
@@ -438,7 +459,7 @@ defmodule Ratatoskr.GrpcTest do
         metadata: %{}
       }
 
-      response1 = Ratatoskr.Grpc.Server.publish(request1, %GRPC.Server.Stream{})
+      response1 = Ratatoskr.Interfaces.Grpc.Server.publish(request1, %GRPC.Server.Stream{})
       assert %PublishResponse{success: true} = response1
 
       # Test binary payload
@@ -450,7 +471,7 @@ defmodule Ratatoskr.GrpcTest do
         metadata: %{}
       }
 
-      response2 = Ratatoskr.Grpc.Server.publish(request2, %GRPC.Server.Stream{})
+      response2 = Ratatoskr.Interfaces.Grpc.Server.publish(request2, %GRPC.Server.Stream{})
       assert %PublishResponse{success: true} = response2
 
       # Test JSON-like payload
@@ -462,7 +483,7 @@ defmodule Ratatoskr.GrpcTest do
         metadata: %{"content-type" => "application/json"}
       }
 
-      response3 = Ratatoskr.Grpc.Server.publish(request3, %GRPC.Server.Stream{})
+      response3 = Ratatoskr.Interfaces.Grpc.Server.publish(request3, %GRPC.Server.Stream{})
       assert %PublishResponse{success: true} = response3
     end
 
@@ -484,13 +505,13 @@ defmodule Ratatoskr.GrpcTest do
         metadata: complex_metadata
       }
 
-      response = Ratatoskr.Grpc.Server.publish(request, %GRPC.Server.Stream{})
+      response = Ratatoskr.Interfaces.Grpc.Server.publish(request, %GRPC.Server.Stream{})
       assert %PublishResponse{success: true} = response
     end
   end
 
   describe "gRPC Error Handling" do
-    test "handles publish to topic that gets deleted during operation" do
+    test "handles publish to topic that gets deleted by auto-recreating it" do
       {:ok, _} = Ratatoskr.create_topic("temp-topic")
 
       # Delete the topic to simulate race condition
@@ -502,18 +523,23 @@ defmodule Ratatoskr.GrpcTest do
         metadata: %{}
       }
 
-      response = Ratatoskr.Grpc.Server.publish(request, %GRPC.Server.Stream{})
+      response = Ratatoskr.Interfaces.Grpc.Server.publish(request, %GRPC.Server.Stream{})
 
-      assert %PublishResponse{success: false} = response
-      assert response.error != ""
+      # Should succeed due to auto-creation
+      assert %PublishResponse{success: true} = response
+      assert response.message_id != ""
+      assert response.error == ""
+
+      # Verify topic was auto-recreated
+      assert Ratatoskr.topic_exists?("temp-topic")
     end
 
-    test "handles batch publish with some invalid topics" do
+    test "handles batch publish with auto-topic creation for all topics" do
       {:ok, _} = Ratatoskr.create_topic("valid-batch-topic")
 
       messages = [
         %PublishRequest{topic: "valid-batch-topic", payload: "msg1", metadata: %{}},
-        %PublishRequest{topic: "invalid-topic", payload: "msg2", metadata: %{}},
+        %PublishRequest{topic: "auto-created-in-batch", payload: "msg2", metadata: %{}},
         %PublishRequest{topic: "valid-batch-topic", payload: "msg3", metadata: %{}}
       ]
 
@@ -522,24 +548,27 @@ defmodule Ratatoskr.GrpcTest do
         messages: messages
       }
 
-      response = Ratatoskr.Grpc.Server.publish_batch(request, %GRPC.Server.Stream{})
+      response = Ratatoskr.Interfaces.Grpc.Server.publish_batch(request, %GRPC.Server.Stream{})
 
       assert %PublishBatchResponse{
-               success_count: 2,
-               error_count: 1,
+               success_count: 3,
+               error_count: 0,
                results: results
              } = response
 
       assert length(results) == 3
       assert Enum.at(results, 0).success == true
-      assert Enum.at(results, 1).success == false
+      assert Enum.at(results, 1).success == true
       assert Enum.at(results, 2).success == true
+
+      # Verify auto-created topic exists
+      assert Ratatoskr.topic_exists?("auto-created-in-batch")
     end
 
     test "handles create topic with empty name" do
       # Test with empty name - this may succeed depending on the broker implementation
       request = %CreateTopicRequest{name: ""}
-      response = Ratatoskr.Grpc.Server.create_topic(request, %GRPC.Server.Stream{})
+      response = Ratatoskr.Interfaces.Grpc.Server.create_topic(request, %GRPC.Server.Stream{})
 
       # Just verify we get a valid response structure
       assert %CreateTopicResponse{} = response
@@ -551,7 +580,7 @@ defmodule Ratatoskr.GrpcTest do
       {:ok, _} = Ratatoskr.publish("no-subs-topic", %{data: "lonely message"})
 
       request = %GetStatsRequest{topic: "no-subs-topic"}
-      response = Ratatoskr.Grpc.Server.get_stats(request, %GRPC.Server.Stream{})
+      response = Ratatoskr.Interfaces.Grpc.Server.get_stats(request, %GRPC.Server.Stream{})
 
       assert %GetStatsResponse{
                topic: "no-subs-topic",

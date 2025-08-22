@@ -5,24 +5,15 @@ defmodule Ratatoskr.Application do
   require Logger
 
   @impl true
-  def start(_type, _args) do
+  def start(type, args) do
     Logger.info("Starting Ratatoskr message broker...")
 
-    children = [
-      # Registry for topic discovery
-      {Registry, keys: :unique, name: Ratatoskr.Registry},
+    # Delegate to the clean architecture application server
+    Ratatoskr.Servers.Application.start(type, args)
+  end
 
-      # DynamicSupervisor for topics
-      {DynamicSupervisor, strategy: :one_for_one, name: Ratatoskr.Topic.Supervisor},
-
-      # Broker coordinator
-      Ratatoskr.Broker,
-
-      # gRPC server
-      {GRPC.Server.Supervisor, endpoint: Ratatoskr.Endpoint, port: 50051, start_server: true}
-    ]
-
-    opts = [strategy: :one_for_one, name: Ratatoskr.Supervisor]
-    Supervisor.start_link(children, opts)
+  @impl true
+  def stop(state) do
+    Ratatoskr.Servers.Application.stop(state)
   end
 end

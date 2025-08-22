@@ -224,3 +224,9 @@ defmodule Ratatoskr.Grpc.MessageBroker.Service do
 
   rpc(:Unsubscribe, Ratatoskr.Grpc.UnsubscribeRequest, Ratatoskr.Grpc.UnsubscribeResponse)
 end
+
+defmodule Ratatoskr.Grpc.MessageBroker.Stub do
+  @moduledoc false
+
+  use GRPC.Stub, service: Ratatoskr.Grpc.MessageBroker.Service
+end
