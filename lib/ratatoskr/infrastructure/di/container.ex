@@ -182,6 +182,11 @@ defmodule Ratatoskr.Infrastructure.DI.Container do
     Enum.each(deps, &register_single_dependency(&1, register_func))
   end
 
+  defp register_dependencies(invalid, _register_func) do
+    require Logger
+    Logger.warning("Invalid dependency configuration - expected list, got: #{inspect(invalid)}")
+  end
+
   defp register_single_dependency({key, module, args}, register_func)
        when is_atom(key) and is_atom(module) and is_list(args) do
     register_func.(key, module, args, [])
@@ -209,10 +214,6 @@ defmodule Ratatoskr.Infrastructure.DI.Container do
     Logger.warning("Invalid dependency configuration: #{inspect(invalid)}")
   end
 
-  defp register_dependencies(invalid, _register_func) do
-    require Logger
-    Logger.warning("Invalid dependency configuration - expected list, got: #{inspect(invalid)}")
-  end
 
   @doc """
   Performs health checks on all managed dependencies.
