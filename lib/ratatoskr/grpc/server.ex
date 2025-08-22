@@ -249,17 +249,27 @@ defmodule Ratatoskr.Grpc.Server do
   def unsubscribe(request, _stream) do
     Logger.debug("gRPC Unsubscribe from: #{request.topic}, ref: #{request.subscription_ref}")
 
-    case Ratatoskr.unsubscribe(request.topic, request.subscription_ref) do
-      :ok ->
-        %UnsubscribeResponse{
-          success: true,
-          error: ""
-        }
+    # Convert string representation back to reference
+    case parse_subscription_ref(request.subscription_ref) do
+      {:ok, ref} ->
+        case Ratatoskr.unsubscribe(request.topic, ref) do
+          :ok ->
+            %UnsubscribeResponse{
+              success: true,
+              error: ""
+            }
+
+          {:error, reason} ->
+            %UnsubscribeResponse{
+              success: false,
+              error: to_string(reason)
+            }
+        end
 
       {:error, reason} ->
         %UnsubscribeResponse{
           success: false,
-          error: to_string(reason)
+          error: "Invalid subscription reference: #{reason}"
         }
     end
   end
@@ -316,4 +326,24 @@ defmodule Ratatoskr.Grpc.Server do
   end
 
   defp convert_metadata(_), do: %{}
+
+  defp encode_subscription_ref(ref) when is_reference(ref) do
+    ref |> :erlang.term_to_binary() |> Base.encode64()
+  end
+
+  defp parse_subscription_ref(ref_string) when is_binary(ref_string) do
+    try do
+      # Try to decode base64 encoded reference term
+      decoded = Base.decode64!(ref_string)
+      ref = :erlang.binary_to_term(decoded)
+
+      if is_reference(ref) do
+        {:ok, ref}
+      else
+        {:error, "not a reference"}
+      end
+    rescue
+      _ -> {:error, "invalid format"}
+    end
+  end
 end
