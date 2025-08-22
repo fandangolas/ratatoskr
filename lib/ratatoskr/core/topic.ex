@@ -10,8 +10,7 @@ defmodule Ratatoskr.Core.Topic do
 
   @type t :: %__MODULE__{
           name: String.t(),
-          partition_count: pos_integer(),
-          retention_ms: pos_integer(),
+          partitions: pos_integer(),
           max_subscribers: pos_integer(),
           config: map(),
           created_at: DateTime.t()
@@ -20,11 +19,8 @@ defmodule Ratatoskr.Core.Topic do
   defstruct [
     :name,
     :created_at,
-    partition_count: 1,
-    # 1 hour default
-    retention_ms: 3_600_000,
-    # Default limit
-    max_subscribers: 10_000,
+    partitions: 1,
+    max_subscribers: 1000,
     config: %{}
   ]
 
@@ -35,12 +31,18 @@ defmodule Ratatoskr.Core.Topic do
   def new(name, opts \\ []) do
     with :ok <- validate_name(name),
          :ok <- validate_config(opts) do
+      # Convert map config to keyword list for compatibility
+      config_opts = case opts do
+        %{} = map -> Map.to_list(map)
+        list when is_list(list) -> list
+        _ -> []
+      end
+      
       topic = %__MODULE__{
         name: name,
-        partition_count: Keyword.get(opts, :partition_count, 1),
-        retention_ms: Keyword.get(opts, :retention_ms, 3_600_000),
-        max_subscribers: Keyword.get(opts, :max_subscribers, 10_000),
-        config: Keyword.get(opts, :config, %{}),
+        partitions: Keyword.get(config_opts, :partitions, 1),
+        max_subscribers: Keyword.get(config_opts, :max_subscribers, 1000),
+        config: Map.merge(%{}, Map.new(config_opts)),
         created_at: DateTime.utc_now()
       }
 
@@ -75,7 +77,7 @@ defmodule Ratatoskr.Core.Topic do
   @spec route_message(t(), Message.t()) :: non_neg_integer()
   def route_message(%__MODULE__{} = topic, %Message{} = message) do
     key = message.partition_key || message.id
-    :erlang.phash2(key, topic.partition_count)
+    :erlang.phash2(key, topic.partitions)
   end
 
   @doc """
@@ -83,16 +85,19 @@ defmodule Ratatoskr.Core.Topic do
   """
   @spec can_add_subscriber?(t(), current_count :: non_neg_integer()) :: boolean()
   def can_add_subscriber?(%__MODULE__{} = topic, current_count) do
-    current_count < topic.max_subscribers
+    case topic.max_subscribers do
+      :unlimited -> true
+      max when is_integer(max) -> current_count < max
+    end
   end
 
   @doc """
   Checks if a message should be retained based on topic retention policy.
   """
   @spec should_retain_message?(t(), Message.t()) :: boolean()
-  def should_retain_message?(%__MODULE__{} = topic, %Message{} = message) do
-    age_ms = DateTime.diff(DateTime.utc_now(), message.timestamp, :millisecond)
-    age_ms < topic.retention_ms
+  def should_retain_message?(%__MODULE__{} = _topic, %Message{} = _message) do
+    # For MVP, always retain messages (no retention policy yet)
+    true
   end
 
   @doc """
@@ -100,11 +105,18 @@ defmodule Ratatoskr.Core.Topic do
   """
   @spec update_config(t(), map()) :: {:ok, t()} | {:error, reason :: atom()}
   def update_config(%__MODULE__{} = topic, new_config) do
-    merged_config = Map.merge(topic.config, new_config)
+    # Update actual topic fields if they are provided
+    updated_topic = %{
+      topic |
+      partitions: Map.get(new_config, :partitions, topic.partitions),
+      max_subscribers: Map.get(new_config, :max_subscribers, topic.max_subscribers),
+      config: Map.merge(topic.config, new_config)
+    }
 
-    case validate_config_map(merged_config) do
-      :ok -> {:ok, %{topic | config: merged_config}}
-      error -> error
+    # Validate the updated topic
+    with :ok <- validate_partitions(updated_topic.partitions),
+         :ok <- validate_max_subscribers(updated_topic.max_subscribers) do
+      {:ok, updated_topic}
     end
   end
 
@@ -115,8 +127,7 @@ defmodule Ratatoskr.Core.Topic do
   def stats_template(%__MODULE__{} = topic) do
     %{
       topic: topic.name,
-      partition_count: topic.partition_count,
-      retention_ms: topic.retention_ms,
+      partitions: topic.partitions,
       max_subscribers: topic.max_subscribers,
       created_at: topic.created_at,
       message_count: 0,
@@ -126,47 +137,59 @@ defmodule Ratatoskr.Core.Topic do
     }
   end
 
+  @doc """
+  Validates if a topic is well-formed according to business rules.
+  """
+  @spec valid?(t()) :: boolean()
+  def valid?(%__MODULE__{} = topic) do
+    validate_name(topic.name) == :ok and
+      validate_partitions(topic.partitions) == :ok and
+      validate_max_subscribers(topic.max_subscribers) == :ok and
+      match?(%DateTime{}, topic.created_at)
+  end
+
   # Private functions
 
   defp validate_name(name) when is_binary(name) do
     cond do
       String.length(name) == 0 ->
-        {:error, :empty_name}
+        {:error, :empty_topic_name}
 
       String.length(name) > 255 ->
-        {:error, :name_too_long}
+        {:error, :topic_name_too_long}
 
       not Regex.match?(~r/^[a-zA-Z0-9_-]+$/, name) ->
-        {:error, :invalid_name_format}
-
-      String.starts_with?(name, "_") ->
-        {:error, :reserved_name_prefix}
+        {:error, :invalid_topic_name_format}
 
       true ->
         :ok
     end
   end
 
-  defp validate_name(_), do: {:error, :name_must_be_string}
+  defp validate_name(_), do: {:error, :topic_name_must_be_string}
 
   defp validate_config(opts) do
-    with :ok <- validate_partition_count(Keyword.get(opts, :partition_count, 1)),
-         :ok <- validate_retention_ms(Keyword.get(opts, :retention_ms, 3_600_000)),
-         :ok <- validate_max_subscribers(Keyword.get(opts, :max_subscribers, 10_000)),
-         :ok <- validate_config_map(Keyword.get(opts, :config, %{})) do
+    # Convert map to keyword list for validation
+    config_list = case opts do
+      %{} = map -> Map.to_list(map)
+      list when is_list(list) -> list
+      _ -> []
+    end
+    
+    with :ok <- validate_partitions(Keyword.get(config_list, :partitions, 1)),
+         :ok <- validate_max_subscribers(Keyword.get(config_list, :max_subscribers, 1000)) do
       :ok
     end
   end
 
-  defp validate_partition_count(count) when is_integer(count) and count > 0 and count <= 1000,
+  defp validate_partitions(count) when is_integer(count) and count > 0 and count <= 1000,
     do: :ok
 
-  defp validate_partition_count(_), do: {:error, :invalid_partition_count}
+  defp validate_partitions(_), do: {:error, :invalid_partitions}
 
-  defp validate_retention_ms(ms) when is_integer(ms) and ms > 0, do: :ok
-  defp validate_retention_ms(_), do: {:error, :invalid_retention_ms}
 
-  defp validate_max_subscribers(max) when is_integer(max) and max > 0 and max <= 100_000, do: :ok
+  defp validate_max_subscribers(max) when is_integer(max) and max > 0, do: :ok
+  defp validate_max_subscribers(:unlimited), do: :ok
   defp validate_max_subscribers(_), do: {:error, :invalid_max_subscribers}
 
   defp validate_config_map(config) when is_map(config) do

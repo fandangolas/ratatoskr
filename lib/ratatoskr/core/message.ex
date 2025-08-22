@@ -109,14 +109,31 @@ defmodule Ratatoskr.Core.Message do
   defp validate_topic(_), do: {:error, :topic_must_be_string}
 
   defp validate_payload(payload) do
-    try do
-      # Ensure payload is serializable
-      _ = :erlang.term_to_binary(payload)
-      :ok
-    rescue
-      _ -> {:error, :payload_not_serializable}
+    # Check if payload contains functions (not serializable)
+    if contains_function?(payload) do
+      {:error, :payload_not_serializable}
+    else
+      try do
+        # Ensure payload is serializable
+        _ = :erlang.term_to_binary(payload)
+        :ok
+      rescue
+        _ -> {:error, :payload_not_serializable}
+      end
     end
   end
+  
+  defp contains_function?(payload) when is_function(payload), do: true
+  defp contains_function?(payload) when is_list(payload) do
+    Enum.any?(payload, &contains_function?/1)
+  end
+  defp contains_function?(payload) when is_tuple(payload) do
+    payload |> Tuple.to_list() |> Enum.any?(&contains_function?/1)
+  end
+  defp contains_function?(payload) when is_map(payload) do
+    Enum.any?(payload, fn {k, v} -> contains_function?(k) or contains_function?(v) end)
+  end
+  defp contains_function?(_), do: false
 
   defp payload_size_bytes(payload) do
     try do

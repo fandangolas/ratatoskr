@@ -15,7 +15,9 @@ defmodule Ratatoskr.Core.Subscription do
           created_at: DateTime.t(),
           last_message_at: DateTime.t() | nil,
           message_count: non_neg_integer(),
-          metadata: map()
+          metadata: map(),
+          status: :active | :paused | :cancelled,
+          options: keyword()
         }
 
   defstruct [
@@ -28,7 +30,9 @@ defmodule Ratatoskr.Core.Subscription do
     :created_at,
     :last_message_at,
     message_count: 0,
-    metadata: %{}
+    metadata: %{},
+    status: :active,
+    options: []
   ]
 
   @doc """
@@ -47,7 +51,9 @@ defmodule Ratatoskr.Core.Subscription do
         partition: Keyword.get(opts, :partition),
         filter: Keyword.get(opts, :filter),
         created_at: DateTime.utc_now(),
-        metadata: Keyword.get(opts, :metadata, %{})
+        metadata: Keyword.get(opts, :metadata, %{}),
+        status: :active,
+        options: opts
       }
 
       {:ok, subscription}
@@ -66,11 +72,35 @@ defmodule Ratatoskr.Core.Subscription do
   end
 
   @doc """
-  Checks if subscription is still active (process alive).
+  Checks if subscription is still active.
   """
   @spec active?(t()) :: boolean()
   def active?(%__MODULE__{} = subscription) do
-    Process.alive?(subscription.subscriber_pid)
+    subscription.status == :active and Process.alive?(subscription.subscriber_pid)
+  end
+
+  @doc """
+  Cancels a subscription.
+  """
+  @spec cancel(t()) :: t()
+  def cancel(%__MODULE__{} = subscription) do
+    %{subscription | status: :cancelled}
+  end
+
+  @doc """
+  Pauses a subscription.
+  """
+  @spec pause(t()) :: t()
+  def pause(%__MODULE__{} = subscription) do
+    %{subscription | status: :paused}
+  end
+
+  @doc """
+  Resumes a paused subscription.
+  """
+  @spec resume(t()) :: t()
+  def resume(%__MODULE__{} = subscription) do
+    %{subscription | status: :active}
   end
 
   @doc """
@@ -78,7 +108,8 @@ defmodule Ratatoskr.Core.Subscription do
   """
   @spec should_deliver?(t(), Ratatoskr.Core.Message.t()) :: boolean()
   def should_deliver?(%__MODULE__{} = subscription, %Ratatoskr.Core.Message{} = message) do
-    partition_match?(subscription, message) and
+    active?(subscription) and
+      partition_match?(subscription, message) and
       filter_match?(subscription, message)
   end
 
@@ -130,9 +161,9 @@ defmodule Ratatoskr.Core.Subscription do
   @doc """
   Serializes subscription reference for transport (e.g., gRPC).
   """
-  @spec serialize_reference(t()) :: String.t()
-  def serialize_reference(%__MODULE__{} = subscription) do
-    subscription.id
+  @spec serialize_reference(reference()) :: String.t()
+  def serialize_reference(ref) when is_reference(ref) do
+    ref
     |> :erlang.term_to_binary()
     |> Base.encode64()
   end
@@ -140,20 +171,33 @@ defmodule Ratatoskr.Core.Subscription do
   @doc """
   Deserializes subscription reference from transport format.
   """
-  @spec deserialize_reference(String.t()) :: {:ok, reference()} | {:error, reason :: atom()}
+  @spec deserialize_reference(String.t()) :: reference()
   def deserialize_reference(ref_string) when is_binary(ref_string) do
     try do
       decoded = Base.decode64!(ref_string)
       ref = :erlang.binary_to_term(decoded)
 
       if is_reference(ref) do
-        {:ok, ref}
+        ref
       else
-        {:error, :not_a_reference}
+        raise ArgumentError, "Decoded value is not a reference"
       end
     rescue
-      _ -> {:error, :invalid_format}
+      _ -> raise ArgumentError, "Invalid reference format"
     end
+  end
+
+  @doc """
+  Validates if a subscription is well-formed according to business rules.
+  """
+  @spec valid?(t()) :: boolean()
+  def valid?(%__MODULE__{} = subscription) do
+    is_reference(subscription.id) and
+      is_binary(subscription.topic) and
+      subscription.topic != "" and
+      is_pid(subscription.subscriber_pid) and
+      subscription.status in [:active, :paused, :cancelled] and
+      match?(%DateTime{}, subscription.created_at)
   end
 
   # Private functions
@@ -169,13 +213,14 @@ defmodule Ratatoskr.Core.Subscription do
     end
   end
 
-  defp validate_subscriber_pid(_), do: {:error, :invalid_subscriber_pid}
+  defp validate_subscriber_pid(_), do: {:error, :invalid_subscriber}
 
   defp validate_options(opts) do
     # Validate filter function if provided
     case Keyword.get(opts, :filter) do
       nil -> :ok
       fun when is_function(fun, 1) -> :ok
+      filter_map when is_map(filter_map) -> :ok
       _ -> {:error, :invalid_filter}
     end
   end
@@ -188,8 +233,24 @@ defmodule Ratatoskr.Core.Subscription do
     true
   end
 
-  defp filter_match?(%{filter: nil}, _message), do: true
-
+  defp filter_match?(%{filter: nil, options: options}, message) do
+    case Keyword.get(options, :filter) do
+      nil -> true
+      filter_map when is_map(filter_map) ->
+        payload = message.payload
+        Enum.all?(filter_map, fn {key, expected_value} ->
+          Map.get(payload, key) == expected_value
+        end)
+      filter_fun when is_function(filter_fun, 1) ->
+        try do
+          filter_fun.(message.payload)
+        rescue
+          _ -> false
+        end
+      _ -> true
+    end
+  end
+  
   defp filter_match?(%{filter: filter}, message) when is_function(filter, 1) do
     try do
       filter.(message.payload)
@@ -197,4 +258,6 @@ defmodule Ratatoskr.Core.Subscription do
       _ -> false
     end
   end
+  
+  defp filter_match?(_subscription, _message), do: true
 end
