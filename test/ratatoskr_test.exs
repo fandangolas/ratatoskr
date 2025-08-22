@@ -1,10 +1,16 @@
 defmodule RatatoskrTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false  # Changed to false to prevent race conditions in topic management
   doctest Ratatoskr
 
   describe "Topic Management" do
     test "creates and lists topics" do
-      topic_name = "test_topic_#{:rand.uniform(1000)}"
+      topic_name = "test_topic_#{:rand.uniform(100000)}_#{System.system_time(:microsecond)}"
+
+      # Clean up any existing topic first (defensive)
+      if Ratatoskr.topic_exists?(topic_name) do
+        Ratatoskr.delete_topic(topic_name)
+        Process.sleep(10)
+      end
 
       # Topic shouldn't exist initially
       assert false == Ratatoskr.topic_exists?(topic_name)

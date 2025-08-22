@@ -107,7 +107,8 @@ defmodule Ratatoskr.UseCases.ManageTopics do
 
   defp stop_topic_server(topic_pid) do
     if Process.alive?(topic_pid) do
-      GenServer.stop(topic_pid, :normal)
+      # GenServer.stop is synchronous and waits for the process to terminate
+      GenServer.stop(topic_pid, :normal, 5000)
     else
       :ok
     end
