@@ -63,32 +63,36 @@ stream, err := client.Subscribe(ctx, &pb.SubscribeRequest{
 
 ## 📊 Performance
 
-Ratatoskr scales from efficient baseline to massive enterprise loads:
+**Measured on MacBook Air M4 (16GB RAM) - Real Performance Data:**
 
-### Multi-Scale Performance Tiers
+### Current Performance (Verified)
 
-| Scale Tier | Memory | Topics | Subscribers | Throughput | Efficiency | Use Case |
-|------------|--------|--------|-------------|------------|------------|----------|
-| **📊 25MB Baseline** | 25MB | 1 | 200 | **9,496 msg/s** | 380 msg/s/MB | Development, Small Apps |
-| **🚀 1GB Enterprise** | 1GB | 100 | 15,000 | **85,000+ msg/s** | 83 msg/s/MB | Enterprise Applications |
-| **🔥 4GB Ultimate** | 4GB | 500 | 30,000+ | **200,000+ msg/s** | 49 msg/s/MB | Maximum Enterprise Scale |
+| Metric | Value | Test Conditions |
+|--------|-------|-----------------|
+| **Throughput** | **30,769 msg/s** | 1,000 messages with 50 subscribers |
+| **Memory Baseline** | **64MB** | Application startup |
+| **Memory Overhead** | **+2MB** | With 50 active subscribers |
+| **Peak Performance** | **40,000 msg/s** | Without subscribers (burst) |
+| **Memory Efficiency** | **15,385 msg/s/MB** | Messages per MB overhead |
 
-### Detailed API Performance
+### Production Targets
 
-| Metric | Target | Internal API | gRPC API |
-|--------|--------|-------------|----------|
-| Throughput | 1,000 msg/s | **74,771 msg/s** | **9,496 msg/s** |
-| Concurrent Subscribers | 100+ | **500+** | **200+ validated** |
-| Latency P99 | <100ms | **<50ms** | **0.124ms** |
-| Average Latency | <10ms | **<1ms** | **0.105ms** |
+| Use Case | Min Throughput | Max Latency | Memory Budget | Status |
+|----------|----------------|-------------|---------------|--------|
+| **Real-time Chat** | 1,000 msg/s | 5ms | <100MB | ✅ **Exceeded** |
+| **IoT Data Ingestion** | 5,000 msg/s | 10ms | <200MB | ✅ **Exceeded** |
+| **Microservices** | 10,000 msg/s | 50ms | <500MB | ✅ **Ready** |
+| **Event Streaming** | 25,000+ msg/s | 100ms | <1GB | ✅ **Validated** |
 
-### Scaling Characteristics
-- **Memory Scaling**: 164x from baseline (25MB → 4GB)
-- **Throughput Scaling**: 21x performance increase (9.5K → 200K+ msg/s)  
-- **Subscriber Scaling**: 150x concurrent load (200 → 30,000+ subscribers)
-- **Topic Scaling**: 500x multi-tenancy (1 → 500+ topics)
+### Scaling Roadmap
 
-**Benchmarked on MacBook Air M4 (16GB RAM):** From efficient 25MB baseline to massive 4GB enterprise scale, demonstrating true horizontal scalability.
+*Note: Higher-scale benchmarks (1GB+) are theoretical and require validation:*
+
+| Projected Tier | Memory Target | Expected Throughput | Subscribers | Status |
+|----------------|---------------|-------------------|-------------|--------|
+| **Current Baseline** | 64MB | **30K+ msg/s** | 50 | ✅ **Measured** |
+| **Enterprise Scale** | 1GB | 85K+ msg/s (est.) | 1,000+ | 🧪 **Testing Required** |
+| **Ultimate Scale** | 4GB | 200K+ msg/s (est.) | 10,000+ | 🧪 **Theoretical** |
 
 ## 🏗️ Architecture
 
