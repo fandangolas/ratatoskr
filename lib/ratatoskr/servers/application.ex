@@ -7,6 +7,7 @@ defmodule Ratatoskr.Servers.Application do
   """
 
   use Application
+  alias Ratatoskr.Infrastructure.DI.Container
 
   @impl true
   def start(_type, _args) do
@@ -14,6 +15,9 @@ defmodule Ratatoskr.Servers.Application do
       # Infrastructure layer
       {Ratatoskr.Infrastructure.Registry.ProcessRegistry, []},
       {Ratatoskr.Infrastructure.Storage.EtsAdapter, []},
+
+      # Dependency injection lifecycle manager
+      {Ratatoskr.Infrastructure.DI.Lifecycle, []},
 
       # Process management layer
       {Ratatoskr.Servers.Supervisor, []},
@@ -26,6 +30,9 @@ defmodule Ratatoskr.Servers.Application do
 
     case Supervisor.start_link(children, opts) do
       {:ok, pid} ->
+        # Configure lifecycle dependencies
+        Container.configure_lifecycle()
+
         # Initialize telemetry
         setup_telemetry()
 
@@ -38,6 +45,9 @@ defmodule Ratatoskr.Servers.Application do
 
   @impl true
   def stop(_state) do
+    # Shutdown managed dependencies
+    Container.shutdown()
+
     # Cleanup telemetry handlers
     Ratatoskr.Infrastructure.Telemetry.MetricsCollector.detach_handlers()
     :ok
