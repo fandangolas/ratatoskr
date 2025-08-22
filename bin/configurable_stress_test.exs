@@ -32,34 +32,64 @@ defmodule CPUHelper do
 end
 
 # Parse command line arguments
-{subscriber_count, messages_per_subscriber, topic_count} = case System.argv() do
-  [s, m, t] -> 
-    {String.to_integer(s), String.to_integer(m), String.to_integer(t)}
+{total_messages, topic_count, total_subscribers} = case System.argv() do
+  [m, t, s] -> 
+    {String.to_integer(m), String.to_integer(t), String.to_integer(s)}
   _ ->
-    IO.puts("Usage: elixir #{__ENV__.file} <subscribers> <messages_per_subscriber> <topics>")
-    IO.puts("Example: elixir #{__ENV__.file} 100 10 5")
+    IO.puts("Usage: elixir #{__ENV__.file} <total_messages> <topic_count> <total_subscribers>")
+    IO.puts("Example: elixir #{__ENV__.file} 1000 5 100")
     IO.puts("")
-    IO.puts("Using defaults: 100 subscribers, 10 messages/subscriber, 1 topic")
-    {100, 10, 1}
+    IO.puts("Using defaults: 1000 total messages, 1 topic, 100 subscribers")
+    {1000, 1, 100}
 end
 
-# Calculate totals
-total_messages = messages_per_subscriber * subscriber_count
-_subscribers_per_topic = div(subscriber_count, topic_count) + if rem(subscriber_count, topic_count) > 0, do: 1, else: 0
+# Calculate derived values from new input parameters
+subscriber_count = total_subscribers
+subscribers_per_topic = div(total_subscribers, topic_count) + if rem(total_subscribers, topic_count) > 0, do: 1, else: 0
+
+# Calculate expected deliveries based on architecture
 total_deliveries = if topic_count == 1 do
-  # Single topic: each message delivered to all subscribers
-  messages_per_subscriber * subscriber_count
+  # Single topic: each message broadcasts to all subscribers
+  total_messages * total_subscribers  
 else
-  # Multiple topics: messages distributed across topics
-  total_messages
+  # Multiple topics: messages are distributed across topics, subscribers get messages from their topic only
+  # Each topic gets total_messages / topic_count messages
+  # Each subscriber gets all messages published to their topic
+  messages_per_topic = div(total_messages, topic_count)
+  remaining_messages = rem(total_messages, topic_count)
+  
+  # Calculate total deliveries: for each topic, messages * subscribers_on_that_topic
+  total_deliveries_sum = Enum.reduce(0..(topic_count - 1), 0, fn topic_idx, acc ->
+    subscribers_on_topic = div(total_subscribers, topic_count) + 
+      if topic_idx < rem(total_subscribers, topic_count), do: 1, else: 0
+    messages_on_topic = if topic_idx < remaining_messages do
+      messages_per_topic + 1
+    else 
+      messages_per_topic
+    end
+    acc + (messages_on_topic * subscribers_on_topic)
+  end)
+  
+  total_deliveries_sum
 end
+
+# Calculate messages per subscriber for display purposes (approximate)
+messages_per_subscriber = if topic_count == 1 do
+  total_messages
+else
+  div(total_deliveries, total_subscribers)
+end
+
+# Remove unused variable
+# actual_messages_to_publish = total_messages
 
 IO.puts("🚀 === CONFIGURABLE STRESS TEST ===")
 IO.puts("Configuration:")
-IO.puts("• Subscribers: #{subscriber_count}")
-IO.puts("• Messages per subscriber: #{messages_per_subscriber}")
-IO.puts("• Topics: #{topic_count}")
 IO.puts("• Total messages to publish: #{total_messages}")
+IO.puts("• Topics: #{topic_count}")
+IO.puts("• Total subscribers: #{total_subscribers}")
+IO.puts("• Subscribers per topic: #{subscribers_per_topic}")
+IO.puts("• Messages per subscriber: #{messages_per_subscriber}")
 IO.puts("• Expected total deliveries: #{total_deliveries}")
 IO.puts("• Architecture: #{if topic_count == 1, do: "Single topic (broadcast)", else: "Multiple topics (distributed)"}")
 IO.puts("")
@@ -108,7 +138,7 @@ end
 IO.puts("✅ Created #{topic_count} topic(s)")
 
 # Create subscribers
-IO.puts("🔥 Creating #{subscriber_count} subscribers...")
+IO.puts("🔥 Creating #{total_subscribers} subscribers...")
 
 subscriber_pids = if topic_count == 1 do
   # All subscribers on single topic
@@ -267,18 +297,26 @@ publish_latencies = if topic_count == 1 do
   latencies
 else
   # Multiple topics: distribute messages across topics
-  {_, latencies} = Enum.reduce(1..subscriber_count, {0, []}, fn sub_idx, {msg_count, acc_latencies} ->
-    topic_index = rem(sub_idx - 1, topic_count)
-    topic = Enum.at(topics, topic_index)
+  messages_per_topic = div(total_messages, topic_count)
+  remaining_messages = rem(total_messages, topic_count)
+  
+  {_, latencies} = Enum.reduce(0..(topic_count - 1), {0, []}, fn topic_idx, {msg_count, acc_latencies} ->
+    topic = Enum.at(topics, topic_idx)
+    # Some topics get one extra message if total_messages doesn't divide evenly
+    messages_for_this_topic = if topic_idx < remaining_messages do
+      messages_per_topic + 1
+    else
+      messages_per_topic
+    end
     
-    Enum.reduce(1..messages_per_subscriber, {msg_count, acc_latencies}, fn _msg_idx, {count, latencies_acc} ->
+    Enum.reduce(1..messages_for_this_topic, {msg_count, acc_latencies}, fn _msg_idx, {count, latencies_acc} ->
       new_count = count + 1
       publish_start = System.monotonic_time(:microsecond)
       
       {:ok, _} = Ratatoskr.publish(topic, %{
         id: new_count,
         timestamp: publish_start,
-        subscriber_target: sub_idx,
+        topic_idx: topic_idx,
         test: "stress"
       })
       
@@ -320,6 +358,7 @@ cpu_utilization = CPUHelper.calculate_utilization(cpu_sample_start, cpu_sample_e
 
 IO.puts("")
 IO.puts("✅ Publishing complete!")
+IO.puts("📊 Published #{total_messages} messages in #{total_duration_ms}ms")
 IO.puts("📊 Publishing: #{publishing_throughput} msg/s in #{Float.round(total_duration_ms / 1000, 2)}s")
 IO.puts("📊 Peak memory: #{peak_mb}MB (+#{memory_overhead_peak}MB overhead)")
 IO.puts("📊 CPU utilization during publishing: #{cpu_utilization}%")
@@ -339,13 +378,13 @@ IO.puts("⏳ Waiting for message delivery...")
 Process.sleep(5000)
 
 # Collect statistics
-IO.puts("📊 Collecting statistics from #{subscriber_count} subscribers...")
+IO.puts("📊 Collecting statistics from #{total_subscribers} subscribers...")
 
 Enum.each(subscriber_pids, fn pid ->
   send(pid, {:get_stats, self()})
 end)
 
-subscriber_stats = for _i <- 1..subscriber_count do
+subscriber_stats = for _i <- 1..total_subscribers do
   receive do
     {:stats, sub_id, count, samples, duration} -> 
       %{id: sub_id, received: count, latency_samples: samples, duration: duration}
@@ -402,18 +441,19 @@ final_mb = div(:erlang.memory()[:total], 1024 * 1024)
 
 # Generate timestamp for filename
 timestamp = DateTime.utc_now() |> DateTime.to_string() |> String.replace(~r/[^0-9]/, "")
-filename = "/tmp/stress_test_#{subscriber_count}s_#{messages_per_subscriber}m_#{topic_count}t_#{timestamp}.txt"
+filename = "/tmp/stress_test_#{total_messages}m_#{topic_count}t_#{total_subscribers}s_#{timestamp}.txt"
 
 # RESULTS
 results = """
 🏆 === STRESS TEST RESULTS ===
 
 📝 **TEST CONFIGURATION:**
-• Subscribers: #{subscriber_count}
-• Messages per subscriber: #{messages_per_subscriber}
-• Topics: #{topic_count}
-• Architecture: #{if topic_count == 1, do: "Single topic (broadcast)", else: "Multiple topics (distributed)"}
 • Total messages published: #{total_messages}
+• Topics: #{topic_count}
+• Total subscribers: #{total_subscribers}
+• Subscribers per topic: #{subscribers_per_topic}
+• Messages per subscriber: #{messages_per_subscriber}
+• Architecture: #{if topic_count == 1, do: "Single topic (broadcast)", else: "Multiple topics (distributed)"}
 • Expected total deliveries: #{expected_total_deliveries}
 
 🚀 **PUBLISHING PERFORMANCE:**
@@ -433,7 +473,7 @@ results = """
 • RAM after setup: #{setup_mb}MB (+#{memory_overhead_setup}MB)
 • RAM peak: #{peak_mb}MB (+#{memory_overhead_peak}MB)
 • RAM final: #{final_mb}MB
-• Memory per subscriber: #{Float.round(memory_overhead_peak / subscriber_count, 3)}MB
+• Memory per subscriber: #{Float.round(memory_overhead_peak / total_subscribers, 3)}MB
 • CPU utilization: #{cpu_utilization}%
 
 📊 **SUMMARY:**
