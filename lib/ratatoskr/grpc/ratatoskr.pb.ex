@@ -3,7 +3,7 @@ defmodule Ratatoskr.Grpc.CreateTopicRequest do
 
   use Protobuf, protoc_gen_elixir_version: "0.12.0", syntax: :proto3
 
-  field :name, 1, type: :string
+  field(:name, 1, type: :string)
 end
 
 defmodule Ratatoskr.Grpc.CreateTopicResponse do
@@ -11,9 +11,9 @@ defmodule Ratatoskr.Grpc.CreateTopicResponse do
 
   use Protobuf, protoc_gen_elixir_version: "0.12.0", syntax: :proto3
 
-  field :topic, 1, type: :string
-  field :created, 2, type: :bool
-  field :error, 3, type: :string
+  field(:topic, 1, type: :string)
+  field(:created, 2, type: :bool)
+  field(:error, 3, type: :string)
 end
 
 defmodule Ratatoskr.Grpc.DeleteTopicRequest do
@@ -21,7 +21,7 @@ defmodule Ratatoskr.Grpc.DeleteTopicRequest do
 
   use Protobuf, protoc_gen_elixir_version: "0.12.0", syntax: :proto3
 
-  field :name, 1, type: :string
+  field(:name, 1, type: :string)
 end
 
 defmodule Ratatoskr.Grpc.DeleteTopicResponse do
@@ -29,8 +29,8 @@ defmodule Ratatoskr.Grpc.DeleteTopicResponse do
 
   use Protobuf, protoc_gen_elixir_version: "0.12.0", syntax: :proto3
 
-  field :success, 1, type: :bool
-  field :error, 2, type: :string
+  field(:success, 1, type: :bool)
+  field(:error, 2, type: :string)
 end
 
 defmodule Ratatoskr.Grpc.ListTopicsRequest do
@@ -44,7 +44,7 @@ defmodule Ratatoskr.Grpc.ListTopicsResponse do
 
   use Protobuf, protoc_gen_elixir_version: "0.12.0", syntax: :proto3
 
-  field :topics, 1, repeated: true, type: :string
+  field(:topics, 1, repeated: true, type: :string)
 end
 
 defmodule Ratatoskr.Grpc.TopicExistsRequest do
@@ -52,7 +52,7 @@ defmodule Ratatoskr.Grpc.TopicExistsRequest do
 
   use Protobuf, protoc_gen_elixir_version: "0.12.0", syntax: :proto3
 
-  field :name, 1, type: :string
+  field(:name, 1, type: :string)
 end
 
 defmodule Ratatoskr.Grpc.TopicExistsResponse do
@@ -60,7 +60,7 @@ defmodule Ratatoskr.Grpc.TopicExistsResponse do
 
   use Protobuf, protoc_gen_elixir_version: "0.12.0", syntax: :proto3
 
-  field :exists, 1, type: :bool
+  field(:exists, 1, type: :bool)
 end
 
 defmodule Ratatoskr.Grpc.GetStatsRequest do
@@ -68,7 +68,7 @@ defmodule Ratatoskr.Grpc.GetStatsRequest do
 
   use Protobuf, protoc_gen_elixir_version: "0.12.0", syntax: :proto3
 
-  field :topic, 1, type: :string
+  field(:topic, 1, type: :string)
 end
 
 defmodule Ratatoskr.Grpc.GetStatsResponse do
@@ -76,10 +76,10 @@ defmodule Ratatoskr.Grpc.GetStatsResponse do
 
   use Protobuf, protoc_gen_elixir_version: "0.12.0", syntax: :proto3
 
-  field :topic, 1, type: :string
-  field :message_count, 2, type: :int64
-  field :subscriber_count, 3, type: :int32
-  field :error, 4, type: :string
+  field(:topic, 1, type: :string)
+  field(:message_count, 2, type: :int64)
+  field(:subscriber_count, 3, type: :int32)
+  field(:error, 4, type: :string)
 end
 
 defmodule Ratatoskr.Grpc.PublishRequest.MetadataEntry do
@@ -87,8 +87,8 @@ defmodule Ratatoskr.Grpc.PublishRequest.MetadataEntry do
 
   use Protobuf, protoc_gen_elixir_version: "0.12.0", syntax: :proto3
 
-  field :key, 1, type: :string
-  field :value, 2, type: :string
+  field(:key, 1, type: :string)
+  field(:value, 2, type: :string)
 end
 
 defmodule Ratatoskr.Grpc.PublishRequest do
@@ -96,9 +96,14 @@ defmodule Ratatoskr.Grpc.PublishRequest do
 
   use Protobuf, protoc_gen_elixir_version: "0.12.0", syntax: :proto3
 
-  field :topic, 1, type: :string
-  field :payload, 2, type: :bytes
-  field :metadata, 3, repeated: true, type: Ratatoskr.Grpc.PublishRequest.MetadataEntry, map: true
+  field(:topic, 1, type: :string)
+  field(:payload, 2, type: :bytes)
+
+  field(:metadata, 3,
+    repeated: true,
+    type: Ratatoskr.Grpc.PublishRequest.MetadataEntry,
+    map: true
+  )
 end
 
 defmodule Ratatoskr.Grpc.PublishResponse do
@@ -106,10 +111,10 @@ defmodule Ratatoskr.Grpc.PublishResponse do
 
   use Protobuf, protoc_gen_elixir_version: "0.12.0", syntax: :proto3
 
-  field :message_id, 1, type: :string
-  field :timestamp, 2, type: :int64
-  field :success, 3, type: :bool
-  field :error, 4, type: :string
+  field(:message_id, 1, type: :string)
+  field(:timestamp, 2, type: :int64)
+  field(:success, 3, type: :bool)
+  field(:error, 4, type: :string)
 end
 
 defmodule Ratatoskr.Grpc.PublishBatchRequest do
@@ -117,8 +122,8 @@ defmodule Ratatoskr.Grpc.PublishBatchRequest do
 
   use Protobuf, protoc_gen_elixir_version: "0.12.0", syntax: :proto3
 
-  field :topic, 1, type: :string
-  field :messages, 2, repeated: true, type: Ratatoskr.Grpc.PublishRequest
+  field(:topic, 1, type: :string)
+  field(:messages, 2, repeated: true, type: Ratatoskr.Grpc.PublishRequest)
 end
 
 defmodule Ratatoskr.Grpc.PublishBatchResponse do
@@ -126,9 +131,9 @@ defmodule Ratatoskr.Grpc.PublishBatchResponse do
 
   use Protobuf, protoc_gen_elixir_version: "0.12.0", syntax: :proto3
 
-  field :results, 1, repeated: true, type: Ratatoskr.Grpc.PublishResponse
-  field :success_count, 2, type: :int32
-  field :error_count, 3, type: :int32
+  field(:results, 1, repeated: true, type: Ratatoskr.Grpc.PublishResponse)
+  field(:success_count, 2, type: :int32)
+  field(:error_count, 3, type: :int32)
 end
 
 defmodule Ratatoskr.Grpc.SubscribeRequest do
@@ -136,8 +141,8 @@ defmodule Ratatoskr.Grpc.SubscribeRequest do
 
   use Protobuf, protoc_gen_elixir_version: "0.12.0", syntax: :proto3
 
-  field :topic, 1, type: :string
-  field :subscriber_id, 2, type: :string
+  field(:topic, 1, type: :string)
+  field(:subscriber_id, 2, type: :string)
 end
 
 defmodule Ratatoskr.Grpc.UnsubscribeRequest do
@@ -145,8 +150,8 @@ defmodule Ratatoskr.Grpc.UnsubscribeRequest do
 
   use Protobuf, protoc_gen_elixir_version: "0.12.0", syntax: :proto3
 
-  field :topic, 1, type: :string
-  field :subscription_ref, 2, type: :string
+  field(:topic, 1, type: :string)
+  field(:subscription_ref, 2, type: :string)
 end
 
 defmodule Ratatoskr.Grpc.UnsubscribeResponse do
@@ -154,8 +159,8 @@ defmodule Ratatoskr.Grpc.UnsubscribeResponse do
 
   use Protobuf, protoc_gen_elixir_version: "0.12.0", syntax: :proto3
 
-  field :success, 1, type: :bool
-  field :error, 2, type: :string
+  field(:success, 1, type: :bool)
+  field(:error, 2, type: :string)
 end
 
 defmodule Ratatoskr.Grpc.Message.MetadataEntry do
@@ -163,8 +168,8 @@ defmodule Ratatoskr.Grpc.Message.MetadataEntry do
 
   use Protobuf, protoc_gen_elixir_version: "0.12.0", syntax: :proto3
 
-  field :key, 1, type: :string
-  field :value, 2, type: :string
+  field(:key, 1, type: :string)
+  field(:value, 2, type: :string)
 end
 
 defmodule Ratatoskr.Grpc.Message do
@@ -172,11 +177,11 @@ defmodule Ratatoskr.Grpc.Message do
 
   use Protobuf, protoc_gen_elixir_version: "0.12.0", syntax: :proto3
 
-  field :id, 1, type: :string
-  field :topic, 2, type: :string
-  field :payload, 3, type: :bytes
-  field :metadata, 4, repeated: true, type: Ratatoskr.Grpc.Message.MetadataEntry, map: true
-  field :timestamp, 5, type: :int64
+  field(:id, 1, type: :string)
+  field(:topic, 2, type: :string)
+  field(:payload, 3, type: :bytes)
+  field(:metadata, 4, repeated: true, type: Ratatoskr.Grpc.Message.MetadataEntry, map: true)
+  field(:timestamp, 5, type: :int64)
 end
 
 defmodule Ratatoskr.Grpc.AckRequest do
@@ -184,8 +189,8 @@ defmodule Ratatoskr.Grpc.AckRequest do
 
   use Protobuf, protoc_gen_elixir_version: "0.12.0", syntax: :proto3
 
-  field :message_id, 1, type: :string
-  field :success, 2, type: :bool
+  field(:message_id, 1, type: :string)
+  field(:success, 2, type: :bool)
 end
 
 defmodule Ratatoskr.Grpc.AckResponse do
@@ -193,7 +198,7 @@ defmodule Ratatoskr.Grpc.AckResponse do
 
   use Protobuf, protoc_gen_elixir_version: "0.12.0", syntax: :proto3
 
-  field :acknowledged, 1, type: :bool
+  field(:acknowledged, 1, type: :bool)
 end
 
 defmodule Ratatoskr.Grpc.MessageBroker.Service do
@@ -201,21 +206,21 @@ defmodule Ratatoskr.Grpc.MessageBroker.Service do
 
   use GRPC.Service, name: "ratatoskr.MessageBroker", protoc_gen_elixir_version: "0.12.0"
 
-  rpc :CreateTopic, Ratatoskr.Grpc.CreateTopicRequest, Ratatoskr.Grpc.CreateTopicResponse
+  rpc(:CreateTopic, Ratatoskr.Grpc.CreateTopicRequest, Ratatoskr.Grpc.CreateTopicResponse)
 
-  rpc :DeleteTopic, Ratatoskr.Grpc.DeleteTopicRequest, Ratatoskr.Grpc.DeleteTopicResponse
+  rpc(:DeleteTopic, Ratatoskr.Grpc.DeleteTopicRequest, Ratatoskr.Grpc.DeleteTopicResponse)
 
-  rpc :ListTopics, Ratatoskr.Grpc.ListTopicsRequest, Ratatoskr.Grpc.ListTopicsResponse
+  rpc(:ListTopics, Ratatoskr.Grpc.ListTopicsRequest, Ratatoskr.Grpc.ListTopicsResponse)
 
-  rpc :TopicExists, Ratatoskr.Grpc.TopicExistsRequest, Ratatoskr.Grpc.TopicExistsResponse
+  rpc(:TopicExists, Ratatoskr.Grpc.TopicExistsRequest, Ratatoskr.Grpc.TopicExistsResponse)
 
-  rpc :GetStats, Ratatoskr.Grpc.GetStatsRequest, Ratatoskr.Grpc.GetStatsResponse
+  rpc(:GetStats, Ratatoskr.Grpc.GetStatsRequest, Ratatoskr.Grpc.GetStatsResponse)
 
-  rpc :Publish, Ratatoskr.Grpc.PublishRequest, Ratatoskr.Grpc.PublishResponse
+  rpc(:Publish, Ratatoskr.Grpc.PublishRequest, Ratatoskr.Grpc.PublishResponse)
 
-  rpc :PublishBatch, Ratatoskr.Grpc.PublishBatchRequest, Ratatoskr.Grpc.PublishBatchResponse
+  rpc(:PublishBatch, Ratatoskr.Grpc.PublishBatchRequest, Ratatoskr.Grpc.PublishBatchResponse)
 
-  rpc :Subscribe, Ratatoskr.Grpc.SubscribeRequest, stream(Ratatoskr.Grpc.Message)
+  rpc(:Subscribe, Ratatoskr.Grpc.SubscribeRequest, stream(Ratatoskr.Grpc.Message))
 
-  rpc :Unsubscribe, Ratatoskr.Grpc.UnsubscribeRequest, Ratatoskr.Grpc.UnsubscribeResponse
+  rpc(:Unsubscribe, Ratatoskr.Grpc.UnsubscribeRequest, Ratatoskr.Grpc.UnsubscribeResponse)
 end
