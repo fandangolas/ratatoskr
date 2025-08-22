@@ -47,7 +47,8 @@ defmodule Ratatoskr.UseCases.ManageTopics do
     case registry.lookup_topic(topic_name) do
       {:ok, topic_pid} ->
         :ok = stop_topic_server(topic_pid)
-        registry.unregister_topic(topic_name)
+        :ok = registry.unregister_topic(topic_name)
+        :ok
 
       {:error, :not_found} ->
         {:error, :topic_not_found}

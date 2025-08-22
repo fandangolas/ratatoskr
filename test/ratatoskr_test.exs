@@ -28,6 +28,11 @@ defmodule RatatoskrTest do
 
       # Clean up
       assert :ok = Ratatoskr.delete_topic(topic_name)
+      
+      # Wait for deletion to propagate through registry
+      Process.sleep(50)
+      
+      # Verify deletion
       assert false == Ratatoskr.topic_exists?(topic_name)
     end
 
