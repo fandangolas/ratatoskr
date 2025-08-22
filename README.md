@@ -25,33 +25,59 @@
 
 ## 🚀 Quick Start
 
-```elixir
-# Add to your mix.exs
-def deps do
-  [{:ratatoskr, "~> 0.1.0"}]
-end
+**1. Start the Ratatoskr server:**
+```bash
+# Clone and run the message broker
+git clone https://github.com/fandangolas/ratatoskr.git
+cd ratatoskr
+mix deps.get
+mix run --no-halt
+# Server starts on localhost:50051
+```
 
-# Start the broker
-Application.ensure_all_started(:ratatoskr)
+**2. Connect from any language via gRPC:**
 
-# Create a topic
-{:ok, "orders"} = Ratatoskr.create_topic("orders")
+```go
+// Go client example
+import "google.golang.org/grpc"
 
-# Subscribe to messages
-{:ok, ref} = Ratatoskr.subscribe("orders")
+conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
+client := pb.NewMessageBrokerClient(conn)
 
-# Publish a message
-{:ok, message_id} = Ratatoskr.publish("orders", %{
-  id: 123,
-  amount: 99.90,
-  currency: "USD"
+// Create topic
+_, err = client.CreateTopic(ctx, &pb.CreateTopicRequest{Name: "orders"})
+
+// Publish message
+resp, err := client.Publish(ctx, &pb.PublishRequest{
+    Topic:   "orders",
+    Payload: orderData,
+    Metadata: map[string]string{"type": "order"},
 })
 
-# Receive messages
-receive do
-  {:message, message} -> 
-    IO.inspect(message.payload)
-end
+// Subscribe to messages
+stream, err := client.Subscribe(ctx, &pb.SubscribeRequest{Topic: "orders"})
+for {
+    msg, err := stream.Recv()
+    // Process message...
+}
+```
+
+```python
+# Python client example
+import grpc
+import ratatoskr_pb2_grpc as pb_grpc
+import ratatoskr_pb2 as pb
+
+channel = grpc.insecure_channel('localhost:50051')
+client = pb_grpc.MessageBrokerStub(channel)
+
+# Create topic and publish
+client.CreateTopic(pb.CreateTopicRequest(name="orders"))
+response = client.Publish(pb.PublishRequest(
+    topic="orders",
+    payload=order_bytes,
+    metadata={"type": "order"}
+))
 ```
 
 ## 🔌 gRPC Integration
