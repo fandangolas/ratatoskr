@@ -57,7 +57,8 @@ stream, err := client.Subscribe(ctx, &pb.SubscribeRequest{
 - **Type-safe** communication via Protocol Buffers
 - **Streaming support** for real-time subscriptions
 - **Auto-generated clients** for multiple languages
-- **9,500+ msg/s** gRPC throughput with 0.124ms P99 latency
+- **9,496 msg/s** gRPC throughput with 0.124ms P99 latency
+- **Lightweight** ~15MB RAM footprint with <2% CPU usage
 - **Built-in** load balancing and connection management
 
 ## 📊 Performance
@@ -67,10 +68,12 @@ Ratatoskr delivers exceptional performance through careful engineering:
 | Metric | Target | Internal API | gRPC API |
 |--------|--------|-------------|----------|
 | Throughput | 1,000 msg/s | **74,771 msg/s** | **9,496 msg/s** |
-| Concurrent Subscribers | 100+ | **500+** | **Validated** |
+| Concurrent Subscribers | 100+ | **500+** | **200+ validated** |
 | Latency P99 | <100ms | **<50ms** | **0.124ms** |
 | Average Latency | <10ms | **<1ms** | **0.105ms** |
-| Memory Usage | Efficient | **<50MB @ 500 subscribers** | **Low overhead** |
+| Memory Usage | Efficient | **<50MB @ 500 subscribers** | **<25MB @ 200 subscribers** |
+
+**Benchmarked on MacBook Air M4 (16GB RAM):** Achieving 9,496 msg/s gRPC throughput while using only ~15MB additional RAM and maintaining <2% CPU usage under normal load.
 
 ## 🏗️ Architecture
 
