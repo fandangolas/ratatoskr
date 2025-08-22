@@ -8,7 +8,22 @@ import Config
 #   registry: MyCustomRegistry,
 #   storage: MyStorageAdapter,
 #   metrics: MyMetricsCollector,
-#   event_publisher: MyEventPublisher
+#   event_publisher: MyEventPublisher,
+#   lifecycle: [
+#     singletons: [
+#       # Eager singleton with health check
+#       {:metrics_collector, Ratatoskr.Infrastructure.Telemetry.MetricsCollector, [], 
+#        lazy: false, health_check: &Process.alive?/1},
+#       # Lazy singleton
+#       {:global_cache, GlobalCache, [size: 10_000]}
+#     ],
+#     process_scoped: [
+#       # Per-process request context
+#       {:request_context, RequestContext, []},
+#       # Per-process cache
+#       {:local_cache, LocalCache, [size: 1000]}
+#     ]
+#   ]
 
 # Logger configuration
 config :logger,
