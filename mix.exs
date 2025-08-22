@@ -12,8 +12,10 @@ defmodule Ratatoskr.MixProject do
       test_coverage: [
         tool: ExCoveralls,
         skip_files: [
-          "lib/ratatoskr/grpc/ratatoskr.pb.ex",  # Generated protobuf code
-          "test/support/benchmark_helpers.ex"    # Test support code
+          # Generated protobuf code
+          "lib/ratatoskr/grpc/ratatoskr.pb.ex",
+          # Test support code
+          "test/support/benchmark_helpers.ex"
         ]
       ],
       preferred_cli_env: [
