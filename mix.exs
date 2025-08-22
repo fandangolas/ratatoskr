@@ -39,7 +39,7 @@ defmodule Ratatoskr.MixProject do
       {:grpc, "~> 0.7"},
       {:protobuf, "~> 0.12"},
       {:jason, "~> 1.4"},
-      
+
       # Development and testing tools
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: :test},
