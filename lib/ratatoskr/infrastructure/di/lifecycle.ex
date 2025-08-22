@@ -363,7 +363,7 @@ defmodule Ratatoskr.Infrastructure.DI.Lifecycle do
 
   defp create_instance(%{implementation: module, args: args}) when is_atom(module) do
     try do
-      case apply(module, :start_link, [args]) do
+      case module.start_link(args) do
         {:ok, pid} -> {:ok, pid}
         {:ok, pid, _info} -> {:ok, pid}
         {:error, {:already_started, pid}} -> {:ok, pid}

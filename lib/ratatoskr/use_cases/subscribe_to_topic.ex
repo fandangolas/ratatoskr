@@ -56,9 +56,8 @@ defmodule Ratatoskr.UseCases.SubscribeToTopic do
   @spec unsubscribe(String.t(), reference(), deps()) :: :ok | {:error, reason :: atom()}
   def unsubscribe(topic_name, subscription_ref, deps) do
     with {:ok, topic_pid} <- find_topic(topic_name, deps),
-         :ok <- unregister_subscriber(topic_pid, subscription_ref),
-         :ok <- emit_unsubscribe_metrics(topic_name, deps) do
-      :ok
+         :ok <- unregister_subscriber(topic_pid, subscription_ref) do
+      emit_unsubscribe_metrics(topic_name, deps)
     end
   end
 

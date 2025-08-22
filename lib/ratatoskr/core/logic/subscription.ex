@@ -172,7 +172,8 @@ defmodule Ratatoskr.Core.Logic.Subscription do
         raise ArgumentError, "Decoded value is not a reference"
       end
     rescue
-      _ -> raise ArgumentError, "Invalid reference format"
+      e ->
+        reraise ArgumentError, "Invalid reference format: #{Exception.message(e)}", __STACKTRACE__
     end
   end
 
@@ -247,11 +248,9 @@ defmodule Ratatoskr.Core.Logic.Subscription do
   end
 
   defp filter_match?(%{filter: filter}, message) when is_function(filter, 1) do
-    try do
-      filter.(message.payload)
-    rescue
-      _ -> false
-    end
+    filter.(message.payload)
+  rescue
+    _ -> false
   end
 
   defp filter_match?(_subscription, _message), do: true

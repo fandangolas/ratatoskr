@@ -8,6 +8,7 @@ defmodule Ratatoskr.Servers.Application do
 
   use Application
   alias Ratatoskr.Infrastructure.DI.Container
+  alias Ratatoskr.Infrastructure.Telemetry.MetricsCollector
 
   @impl true
   def start(_type, _args) do
@@ -49,18 +50,18 @@ defmodule Ratatoskr.Servers.Application do
     Container.shutdown()
 
     # Cleanup telemetry handlers
-    Ratatoskr.Infrastructure.Telemetry.MetricsCollector.detach_handlers()
+    MetricsCollector.detach_handlers()
     :ok
   end
 
   defp setup_telemetry do
     # Attach telemetry handlers
-    Ratatoskr.Infrastructure.Telemetry.MetricsCollector.attach_default_handlers()
+    MetricsCollector.attach_default_handlers()
 
     # Emit startup metrics
-    Ratatoskr.Infrastructure.Telemetry.MetricsCollector.emit_startup_metrics()
+    MetricsCollector.emit_startup_metrics()
 
     # Start periodic metrics collection
-    Ratatoskr.Infrastructure.Telemetry.MetricsCollector.start_periodic_metrics()
+    MetricsCollector.start_periodic_metrics()
   end
 end

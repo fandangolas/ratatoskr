@@ -179,33 +179,39 @@ defmodule Ratatoskr.Infrastructure.DI.Container do
 
   # Private helper for registering dependencies with error handling
   defp register_dependencies(deps, register_func) when is_list(deps) do
-    Enum.each(deps, fn
-      {key, module, args} when is_atom(key) and is_atom(module) and is_list(args) ->
-        register_func.(key, module, args, [])
-
-      {key, module, args, opts}
-      when is_atom(key) and is_atom(module) and is_list(args) and is_list(opts) ->
-        register_func.(key, module, args, opts)
-
-      {key, {module, function, base_args}, args}
-      when is_atom(key) and is_atom(module) and is_atom(function) and is_list(base_args) and
-             is_list(args) ->
-        register_func.(key, {module, function, base_args}, args, [])
-
-      {key, {module, function, base_args}, args, opts}
-      when is_atom(key) and is_atom(module) and is_atom(function) and is_list(base_args) and
-             is_list(args) and is_list(opts) ->
-        register_func.(key, {module, function, base_args}, args, opts)
-
-      invalid ->
-        require Logger
-        Logger.warning("Invalid dependency configuration: #{inspect(invalid)}")
-    end)
+    Enum.each(deps, &register_single_dependency(&1, register_func))
   end
 
   defp register_dependencies(invalid, _register_func) do
     require Logger
     Logger.warning("Invalid dependency configuration - expected list, got: #{inspect(invalid)}")
+  end
+
+  defp register_single_dependency({key, module, args}, register_func)
+       when is_atom(key) and is_atom(module) and is_list(args) do
+    register_func.(key, module, args, [])
+  end
+
+  defp register_single_dependency({key, module, args, opts}, register_func)
+       when is_atom(key) and is_atom(module) and is_list(args) and is_list(opts) do
+    register_func.(key, module, args, opts)
+  end
+
+  defp register_single_dependency({key, {module, function, base_args}, args}, register_func)
+       when is_atom(key) and is_atom(module) and is_atom(function) and
+              is_list(base_args) and is_list(args) do
+    register_func.(key, {module, function, base_args}, args, [])
+  end
+
+  defp register_single_dependency({key, {module, function, base_args}, args, opts}, register_func)
+       when is_atom(key) and is_atom(module) and is_atom(function) and
+              is_list(base_args) and is_list(args) and is_list(opts) do
+    register_func.(key, {module, function, base_args}, args, opts)
+  end
+
+  defp register_single_dependency(invalid, _register_func) do
+    require Logger
+    Logger.warning("Invalid dependency configuration: #{inspect(invalid)}")
   end
 
   @doc """

@@ -14,25 +14,25 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
     CreateTopicResponse,
     DeleteTopicRequest,
     DeleteTopicResponse,
-    ListTopicsRequest,
-    ListTopicsResponse,
-    TopicExistsRequest,
-    TopicExistsResponse,
     GetStatsRequest,
     GetStatsResponse,
-    PublishRequest,
-    PublishResponse,
+    ListTopicsRequest,
+    ListTopicsResponse,
     PublishBatchRequest,
     PublishBatchResponse,
+    PublishRequest,
+    PublishResponse,
     SubscribeRequest,
+    TopicExistsRequest,
+    TopicExistsResponse,
     UnsubscribeRequest,
     UnsubscribeResponse
   }
 
-  alias Ratatoskr.UseCases.{PublishMessage, SubscribeToTopic, ManageTopics}
-  alias Ratatoskr.Interfaces.Grpc.Mappers
   alias Ratatoskr.Core.Logic.Subscription
   alias Ratatoskr.Infrastructure.DI.Container
+  alias Ratatoskr.Interfaces.Grpc.Mappers
+  alias Ratatoskr.UseCases.{ManageTopics, PublishMessage, SubscribeToTopic}
 
   @doc """
   Creates a new topic.
@@ -219,11 +219,11 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
     Logger.debug("gRPC Subscribe to: #{request.topic}, subscriber: #{request.subscriber_id}")
 
     # Check if topic exists first
-    unless ManageTopics.exists?(request.topic, Container.deps()) do
+    if ManageTopics.exists?(request.topic, Container.deps()) do
+      handle_valid_subscription(request, stream)
+    else
       GRPC.Server.send_reply(stream, {:error, "Topic does not exist: #{request.topic}"})
       :ok
-    else
-      handle_valid_subscription(request, stream)
     end
   end
 

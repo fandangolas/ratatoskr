@@ -135,11 +135,9 @@ defmodule Ratatoskr.Core.Logic.Message do
   defp contains_function?(_), do: false
 
   defp payload_size_bytes(payload) do
-    try do
-      :erlang.external_size(payload)
-    rescue
-      _ -> 0
-    end
+    :erlang.external_size(payload)
+  rescue
+    _ -> 0
   end
 
   defp generate_id do
