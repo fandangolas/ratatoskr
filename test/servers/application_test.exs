@@ -2,7 +2,7 @@ defmodule Ratatoskr.Servers.ApplicationTest do
   use ExUnit.Case, async: false
 
   alias Ratatoskr.Infrastructure.DI.{Container, Lifecycle}
-  
+
   import ApplicationHelper
 
   @moduletag :application
@@ -45,7 +45,7 @@ defmodule Ratatoskr.Servers.ApplicationTest do
     test "lifecycle configuration is processed on startup" do
       # Prepare for clean application start
       prepare_for_application_lifecycle_test()
-      
+
       # Set up test configuration
       original_config = Application.get_env(:ratatoskr, :lifecycle, [])
 

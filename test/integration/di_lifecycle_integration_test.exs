@@ -3,7 +3,7 @@ defmodule Ratatoskr.Integration.DILifecycleIntegrationTest do
 
   alias Ratatoskr.Infrastructure.DI.{Container, Lifecycle}
   alias Ratatoskr.Infrastructure.Registry.ProcessRegistry
-  
+
   import ApplicationHelper
 
   @moduletag :integration
@@ -17,7 +17,7 @@ defmodule Ratatoskr.Integration.DILifecycleIntegrationTest do
       try do
         # Just shutdown managed dependencies, don't stop core processes
         Container.shutdown()
-        
+
         # Don't manually stop Lifecycle or Registry - let application manage them
         # This prevents interference with other tests
       catch

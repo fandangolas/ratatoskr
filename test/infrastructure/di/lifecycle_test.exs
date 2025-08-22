@@ -1,7 +1,7 @@
 defmodule Ratatoskr.Infrastructure.DI.LifecycleTest do
   use ExUnit.Case, async: false
   alias Ratatoskr.Infrastructure.DI.Lifecycle
-  
+
   import ApplicationHelper
 
   # Test GenServer for singleton testing
@@ -36,7 +36,7 @@ defmodule Ratatoskr.Infrastructure.DI.LifecycleTest do
     # Ensure application is running so we have a proper context
     assert :ok = ensure_application_running()
     assert :ok = wait_for_application_processes()
-    
+
     # Clean up any existing managed dependencies from the lifecycle manager
     # but don't stop the lifecycle manager itself
     try do
