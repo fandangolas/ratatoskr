@@ -1,5 +1,6 @@
 defmodule Ratatoskr.Interfaces.GrpcTest do
-  use ExUnit.Case, async: false  # Changed to false to prevent race conditions in topic management
+  # Changed to false to prevent race conditions in topic management
+  use ExUnit.Case, async: false
   doctest Ratatoskr.Interfaces.Grpc.Server
 
   alias Ratatoskr.Grpc.{
@@ -34,7 +35,7 @@ defmodule Ratatoskr.Interfaces.GrpcTest do
     for topic <- topics do
       Ratatoskr.delete_topic(topic)
     end
-    
+
     # Give a small delay to ensure all topics are fully cleaned up
     if length(topics) > 0 do
       Process.sleep(50)
@@ -64,7 +65,7 @@ defmodule Ratatoskr.Interfaces.GrpcTest do
     end
 
     test "deletes topic via gRPC" do
-      topic_name = "to-delete-#{:rand.uniform(100000)}-#{System.system_time(:microsecond)}"
+      topic_name = "to-delete-#{:rand.uniform(100_000)}-#{System.system_time(:microsecond)}"
       {:ok, _} = Ratatoskr.create_topic(topic_name)
 
       # Verify topic exists before deletion
@@ -74,7 +75,7 @@ defmodule Ratatoskr.Interfaces.GrpcTest do
       response = Ratatoskr.Interfaces.Grpc.Server.delete_topic(request, %GRPC.Server.Stream{})
 
       assert %DeleteTopicResponse{success: true, error: ""} = response
-      
+
       # Give a small delay for async cleanup
       Process.sleep(10)
       refute Ratatoskr.topic_exists?(topic_name)
