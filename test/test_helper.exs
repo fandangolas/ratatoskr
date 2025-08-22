@@ -4,5 +4,5 @@ ExUnit.start()
 # Run them explicitly with: mix test --include performance
 # or: mix test --include stress --include recovery --include benchmark
 ExUnit.configure(
-  exclude: [:performance, :stress, :recovery, :benchmark, :grpc_benchmark, :grpc_simple_benchmark]
+  exclude: [:performance, :stress, :recovery, :benchmark, :grpc_benchmark]
 )
