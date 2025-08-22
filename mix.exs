@@ -9,7 +9,13 @@ defmodule Ratatoskr.MixProject do
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
       deps: deps(),
-      test_coverage: [tool: ExCoveralls],
+      test_coverage: [
+        tool: ExCoveralls,
+        skip_files: [
+          "lib/ratatoskr/grpc/ratatoskr.pb.ex",  # Generated protobuf code
+          "test/support/benchmark_helpers.ex"    # Test support code
+        ]
+      ],
       preferred_cli_env: [
         coveralls: :test,
         "coveralls.detail": :test,

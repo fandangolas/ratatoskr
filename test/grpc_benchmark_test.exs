@@ -11,13 +11,13 @@ defmodule Ratatoskr.GrpcBenchmarkTest do
   }
 
   @moduletag :grpc_benchmark
+  @moduletag :benchmark
 
   # Test configuration
   @grpc_host "localhost"
   @grpc_port 50051
   @benchmark_topic "benchmark-topic"
   @warmup_messages 100
-  @benchmark_duration_ms 5000
 
   setup_all do
     # Ensure application is running
@@ -136,9 +136,9 @@ defmodule Ratatoskr.GrpcBenchmarkTest do
       - gRPC Overhead: #{Float.round(overhead_percent, 1)}%
       """)
 
-      # Assertions - realistic expectations for gRPC overhead
-      assert grpc_msg_per_sec > 500, "gRPC should handle >500 msg/s"
-      assert overhead_percent < 1000, "gRPC overhead should be <1000% (10x slower is acceptable)"
+      # Assertions - high-performance expectations for production readiness
+      assert grpc_msg_per_sec > 1000, "gRPC should handle >1000 msg/s"
+      assert overhead_percent < 500, "gRPC overhead should be <500% (5x slower max)"
 
       # Store results for comparison
       %{
@@ -377,12 +377,12 @@ defmodule Ratatoskr.GrpcBenchmarkTest do
           Task.async(fn ->
             {:ok, channel} = GRPC.Stub.connect("#{@grpc_host}:#{@grpc_port}")
 
-            request = %SubscribeRequest{
+            _request = %SubscribeRequest{
               topic: @benchmark_topic,
               subscriber_id: "grpc-sub-#{i}"
             }
 
-            received_count = 0
+            _received_count = 0
             start_time = :os.system_time(:millisecond)
 
             # Note: This is a simplified version - real streaming would use GRPC.Stub.recv
@@ -479,13 +479,13 @@ defmodule Ratatoskr.GrpcBenchmarkTest do
           }
         end
 
-      # Verify gRPC maintains reasonable efficiency
+      # Verify gRPC maintains high performance standards
       for result <- results do
-        assert result.efficiency_percent > 5,
-               "gRPC should maintain >5% efficiency vs internal API (20x slower max)"
+        assert result.efficiency_percent > 20,
+               "gRPC should maintain >20% efficiency vs internal API (5x slower max)"
 
-        assert result.grpc.throughput > 200,
-               "gRPC throughput should exceed 200 msg/s in all scenarios"
+        assert result.grpc.throughput > 500,
+               "gRPC throughput should exceed 500 msg/s in all scenarios"
       end
 
       results

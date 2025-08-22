@@ -358,12 +358,42 @@ When continuing development:
 4. **Test incrementally**: Write test, implement, verify
 5. **Update progress**: Mark completed items with ✅
 
-### Next Priority: gRPC Implementation
-1. Add gRPC dependencies to `mix.exs`
-2. Create Protocol Buffer definitions (`protos/ratatoskr.proto`)
-3. Implement gRPC server endpoints
-4. Add gRPC tests
-5. Create Go client library for core-banking-lab integration
+## 🚀 Performance Benchmarking
+
+### Manual Benchmark Testing
+
+Performance benchmarks are **excluded from CI** to maintain high-performance standards. CI environments are unreliable for performance measurements due to resource constraints and variability.
+
+**Run Performance Tests Locally:**
+```bash
+# Run all benchmark tests
+mix test --include benchmark --include performance
+
+# Run specific gRPC benchmarks  
+mix test test/grpc_benchmark_test.exs --include benchmark --include performance
+
+# Run custom P99 benchmarks (in /bin)
+elixir bin/benchmark_grpc_p99.exs
+elixir bin/benchmark_internal_p99.exs
+```
+
+**Current Performance Standards:**
+- **gRPC Throughput:** >1,000 msg/s minimum
+- **gRPC Overhead:** <500% vs internal API (5x slower max)
+- **gRPC Efficiency:** >20% of internal API performance  
+- **P99 Latency:** <1ms for production workloads
+
+### Updating Performance Results
+
+After running benchmarks, update the results in this document to track performance over time and ensure regressions are caught early.
+
+### Completed: gRPC Implementation ✅
+1. ✅ Add gRPC dependencies to `mix.exs`
+2. ✅ Create Protocol Buffer definitions (`priv/protos/ratatoskr.proto`)
+3. ✅ Implement gRPC server endpoints
+4. ✅ Add gRPC tests (14 integration tests)
+5. ✅ Add comprehensive benchmarking suite
+6. ⬜ Create Go client library for core-banking-lab integration
 
 ## 📚 Quick References
 
