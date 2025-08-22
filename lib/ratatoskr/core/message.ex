@@ -122,17 +122,21 @@ defmodule Ratatoskr.Core.Message do
       end
     end
   end
-  
+
   defp contains_function?(payload) when is_function(payload), do: true
+
   defp contains_function?(payload) when is_list(payload) do
     Enum.any?(payload, &contains_function?/1)
   end
+
   defp contains_function?(payload) when is_tuple(payload) do
     payload |> Tuple.to_list() |> Enum.any?(&contains_function?/1)
   end
+
   defp contains_function?(payload) when is_map(payload) do
     Enum.any?(payload, fn {k, v} -> contains_function?(k) or contains_function?(v) end)
   end
+
   defp contains_function?(_), do: false
 
   defp payload_size_bytes(payload) do

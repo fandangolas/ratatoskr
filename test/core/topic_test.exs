@@ -14,13 +14,13 @@ defmodule Ratatoskr.Core.TopicEntityTest do
     end
 
     test "creates topic with custom configuration" do
-      config = %{partitions: 4, max_subscribers: 500, retention_ms: 86400000}
+      config = %{partitions: 4, max_subscribers: 500, retention_ms: 86_400_000}
       assert {:ok, topic} = Topic.new("events", config)
 
       assert topic.name == "events"
       assert topic.partitions == 4
       assert topic.max_subscribers == 500
-      assert topic.config[:retention_ms] == 86400000
+      assert topic.config[:retention_ms] == 86_400_000
     end
 
     test "validates topic name" do
@@ -54,7 +54,10 @@ defmodule Ratatoskr.Core.TopicEntityTest do
       }
     end
 
-    test "routes to partition 0 for single partition topic", %{single_partition: topic, message: message} do
+    test "routes to partition 0 for single partition topic", %{
+      single_partition: topic,
+      message: message
+    } do
       assert Topic.route_message(topic, message) == 0
     end
 
@@ -63,15 +66,18 @@ defmodule Ratatoskr.Core.TopicEntityTest do
       partition = Topic.route_message(topic, message_with_key)
 
       assert partition in 0..3
-      
+
       # Same key should always route to same partition
       assert Topic.route_message(topic, message_with_key) == partition
     end
 
-    test "routes based on message ID when no partition key", %{multi_partition: topic, message: message} do
+    test "routes based on message ID when no partition key", %{
+      multi_partition: topic,
+      message: message
+    } do
       partition = Topic.route_message(topic, message)
       assert partition in 0..3
-      
+
       # Same message should always route to same partition
       assert Topic.route_message(topic, message) == partition
     end
@@ -109,18 +115,18 @@ defmodule Ratatoskr.Core.TopicEntityTest do
     test "validates configuration updates" do
       {:ok, topic} = Topic.new("test")
 
-      assert {:error, :invalid_max_subscribers} = 
-        Topic.update_config(topic, %{max_subscribers: -1})
+      assert {:error, :invalid_max_subscribers} =
+               Topic.update_config(topic, %{max_subscribers: -1})
 
-      assert {:error, :invalid_partitions} = 
-        Topic.update_config(topic, %{partitions: 0})
+      assert {:error, :invalid_partitions} =
+               Topic.update_config(topic, %{partitions: 0})
     end
 
     test "preserves existing configuration" do
       {:ok, topic} = Topic.new("test", %{custom: "original"})
-      
+
       {:ok, updated} = Topic.update_config(topic, %{max_subscribers: 500})
-      
+
       assert updated.max_subscribers == 500
       assert updated.config[:custom] == "original"
     end

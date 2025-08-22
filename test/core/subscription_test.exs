@@ -89,11 +89,17 @@ defmodule Ratatoskr.Core.SubscriptionTest do
       %{subscription: subscription, message: message}
     end
 
-    test "delivers to active subscriptions without filters", %{subscription: subscription, message: message} do
+    test "delivers to active subscriptions without filters", %{
+      subscription: subscription,
+      message: message
+    } do
       assert Subscription.should_deliver?(subscription, message)
     end
 
-    test "does not deliver to inactive subscriptions", %{subscription: subscription, message: message} do
+    test "does not deliver to inactive subscriptions", %{
+      subscription: subscription,
+      message: message
+    } do
       cancelled = Subscription.cancel(subscription)
       refute Subscription.should_deliver?(cancelled, message)
 
@@ -132,10 +138,10 @@ defmodule Ratatoskr.Core.SubscriptionTest do
   describe "Reference serialization" do
     test "serializes and deserializes references for gRPC transport" do
       {:ok, subscription} = Subscription.new("test", self())
-      
+
       serialized = Subscription.serialize_reference(subscription.id)
       assert is_binary(serialized)
-      
+
       deserialized = Subscription.deserialize_reference(serialized)
       assert deserialized == subscription.id
     end
@@ -193,9 +199,9 @@ defmodule Ratatoskr.Core.SubscriptionTest do
   describe "Subscription lifecycle" do
     test "tracks subscription creation time" do
       {:ok, subscription} = Subscription.new("test", self())
-      
+
       assert match?(%DateTime{}, subscription.created_at)
-      
+
       # Creation time should be recent (within last second)
       now = DateTime.utc_now()
       diff = DateTime.diff(now, subscription.created_at, :millisecond)

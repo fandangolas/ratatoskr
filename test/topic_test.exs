@@ -32,7 +32,10 @@ defmodule Ratatoskr.Core.TopicTest do
       assert is_binary(message_id)
     end
 
-    test "subscribes processes and receives messages", %{topic_name: topic_name, topic_pid: topic_pid} do
+    test "subscribes processes and receives messages", %{
+      topic_name: topic_name,
+      topic_pid: topic_pid
+    } do
       # Create subscription
       {:ok, subscription} = Ratatoskr.Core.Subscription.new(topic_name, self())
       assert {:ok, _subscription_ref} = TopicServer.subscribe_to_server(topic_pid, subscription)

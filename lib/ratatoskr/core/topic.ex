@@ -32,12 +32,13 @@ defmodule Ratatoskr.Core.Topic do
     with :ok <- validate_name(name),
          :ok <- validate_config(opts) do
       # Convert map config to keyword list for compatibility
-      config_opts = case opts do
-        %{} = map -> Map.to_list(map)
-        list when is_list(list) -> list
-        _ -> []
-      end
-      
+      config_opts =
+        case opts do
+          %{} = map -> Map.to_list(map)
+          list when is_list(list) -> list
+          _ -> []
+        end
+
       topic = %__MODULE__{
         name: name,
         partitions: Keyword.get(config_opts, :partitions, 1),
@@ -107,10 +108,10 @@ defmodule Ratatoskr.Core.Topic do
   def update_config(%__MODULE__{} = topic, new_config) do
     # Update actual topic fields if they are provided
     updated_topic = %{
-      topic |
-      partitions: Map.get(new_config, :partitions, topic.partitions),
-      max_subscribers: Map.get(new_config, :max_subscribers, topic.max_subscribers),
-      config: Map.merge(topic.config, new_config)
+      topic
+      | partitions: Map.get(new_config, :partitions, topic.partitions),
+        max_subscribers: Map.get(new_config, :max_subscribers, topic.max_subscribers),
+        config: Map.merge(topic.config, new_config)
     }
 
     # Validate the updated topic
@@ -170,12 +171,13 @@ defmodule Ratatoskr.Core.Topic do
 
   defp validate_config(opts) do
     # Convert map to keyword list for validation
-    config_list = case opts do
-      %{} = map -> Map.to_list(map)
-      list when is_list(list) -> list
-      _ -> []
-    end
-    
+    config_list =
+      case opts do
+        %{} = map -> Map.to_list(map)
+        list when is_list(list) -> list
+        _ -> []
+      end
+
     with :ok <- validate_partitions(Keyword.get(config_list, :partitions, 1)),
          :ok <- validate_max_subscribers(Keyword.get(config_list, :max_subscribers, 1000)) do
       :ok
@@ -186,7 +188,6 @@ defmodule Ratatoskr.Core.Topic do
     do: :ok
 
   defp validate_partitions(_), do: {:error, :invalid_partitions}
-
 
   defp validate_max_subscribers(max) when is_integer(max) and max > 0, do: :ok
   defp validate_max_subscribers(:unlimited), do: :ok

@@ -235,22 +235,28 @@ defmodule Ratatoskr.Core.Subscription do
 
   defp filter_match?(%{filter: nil, options: options}, message) do
     case Keyword.get(options, :filter) do
-      nil -> true
+      nil ->
+        true
+
       filter_map when is_map(filter_map) ->
         payload = message.payload
+
         Enum.all?(filter_map, fn {key, expected_value} ->
           Map.get(payload, key) == expected_value
         end)
+
       filter_fun when is_function(filter_fun, 1) ->
         try do
           filter_fun.(message.payload)
         rescue
           _ -> false
         end
-      _ -> true
+
+      _ ->
+        true
     end
   end
-  
+
   defp filter_match?(%{filter: filter}, message) when is_function(filter, 1) do
     try do
       filter.(message.payload)
@@ -258,6 +264,6 @@ defmodule Ratatoskr.Core.Subscription do
       _ -> false
     end
   end
-  
+
   defp filter_match?(_subscription, _message), do: true
 end
