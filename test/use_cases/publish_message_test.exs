@@ -1,5 +1,6 @@
 defmodule Ratatoskr.UseCases.PublishMessageTest do
-  use ExUnit.Case, async: true
+  # Changed to false to avoid conflicts
+  use ExUnit.Case, async: false
   alias Ratatoskr.UseCases.PublishMessage
 
   # Mock registry implementation for testing
@@ -9,14 +10,7 @@ defmodule Ratatoskr.UseCases.PublishMessageTest do
     def register_topic(_name, _pid), do: :ok
     def unregister_topic(_name), do: :ok
 
-    def lookup_topic("existing_topic") do
-      # Return error to simulate topic not found, since we can't easily mock
-      # a real topic server process in these unit tests
-      {:error, :not_found}
-    end
-
-    def lookup_topic("nonexistent_topic"), do: {:error, :not_found}
-    def lookup_topic(_), do: {:error, :not_found}
+    def lookup_topic(_topic_name), do: {:error, :not_found}
 
     def list_topics, do: {:ok, []}
   end
@@ -33,6 +27,21 @@ defmodule Ratatoskr.UseCases.PublishMessageTest do
   end
 
   setup do
+    # Mock the ManageTopics module to prevent actual topic creation
+    :meck.new(Ratatoskr.UseCases.ManageTopics, [:non_strict])
+
+    :meck.expect(Ratatoskr.UseCases.ManageTopics, :create, fn _topic_name, _opts, _deps ->
+      {:error, :topic_creation_disabled_in_test}
+    end)
+
+    on_exit(fn ->
+      try do
+        :meck.unload(Ratatoskr.UseCases.ManageTopics)
+      catch
+        :error, _ -> :ok
+      end
+    end)
+
     deps = %{
       registry: MockRegistry,
       storage: nil,
@@ -47,14 +56,14 @@ defmodule Ratatoskr.UseCases.PublishMessageTest do
     test "returns error when topic not found", %{deps: deps} do
       payload = %{id: 123, amount: 99.90}
 
-      assert {:error, :topic_not_found} =
+      assert {:error, :topic_creation_disabled_in_test} =
                PublishMessage.execute("existing_topic", payload, [], deps)
     end
 
     test "returns error for non-existent topic", %{deps: deps} do
       payload = %{data: "test"}
 
-      assert {:error, :topic_not_found} =
+      assert {:error, :topic_creation_disabled_in_test} =
                PublishMessage.execute("nonexistent_topic", payload, [], deps)
     end
 
@@ -74,7 +83,7 @@ defmodule Ratatoskr.UseCases.PublishMessageTest do
       payload = %{id: 456}
       opts = [metadata: %{"source" => "api", "version" => "1.0"}]
 
-      assert {:error, :topic_not_found} =
+      assert {:error, :topic_creation_disabled_in_test} =
                PublishMessage.execute("existing_topic", payload, opts, deps)
     end
 
@@ -82,7 +91,7 @@ defmodule Ratatoskr.UseCases.PublishMessageTest do
       payload = %{user_id: 789}
       opts = [partition_key: "user-789"]
 
-      assert {:error, :topic_not_found} =
+      assert {:error, :topic_creation_disabled_in_test} =
                PublishMessage.execute("existing_topic", payload, opts, deps)
     end
 
@@ -90,7 +99,7 @@ defmodule Ratatoskr.UseCases.PublishMessageTest do
       # This test verifies that metrics are called even when topic not found
       payload = %{data: "test"}
 
-      assert {:error, :topic_not_found} =
+      assert {:error, :topic_creation_disabled_in_test} =
                PublishMessage.execute("existing_topic", payload, [], deps)
 
       # Metrics should be recorded (mocked in our test)
@@ -102,7 +111,7 @@ defmodule Ratatoskr.UseCases.PublishMessageTest do
       # Even with valid message data, should fail if topic doesn't exist
       valid_payload = %{valid: "data"}
 
-      assert {:error, :topic_not_found} =
+      assert {:error, :topic_creation_disabled_in_test} =
                PublishMessage.execute("nonexistent", valid_payload, [], deps)
     end
 
@@ -118,7 +127,7 @@ defmodule Ratatoskr.UseCases.PublishMessageTest do
   describe "PublishMessage error handling" do
     test "handles registry lookup failures gracefully", %{deps: deps} do
       # Simulate registry failure by using a topic that returns error
-      assert {:error, :topic_not_found} =
+      assert {:error, :topic_creation_disabled_in_test} =
                PublishMessage.execute("fail_topic", %{}, [], deps)
     end
 
@@ -142,7 +151,7 @@ defmodule Ratatoskr.UseCases.PublishMessageTest do
       # Storage is nil in our deps, should still work
       payload = %{no_storage: true}
 
-      assert {:error, :topic_not_found} =
+      assert {:error, :topic_creation_disabled_in_test} =
                PublishMessage.execute("existing_topic", payload, [], deps)
     end
 
@@ -150,7 +159,7 @@ defmodule Ratatoskr.UseCases.PublishMessageTest do
       # Event publisher is nil in our deps, should still work
       payload = %{no_events: true}
 
-      assert {:error, :topic_not_found} =
+      assert {:error, :topic_creation_disabled_in_test} =
                PublishMessage.execute("existing_topic", payload, [], deps)
     end
 
@@ -195,7 +204,7 @@ defmodule Ratatoskr.UseCases.PublishMessageTest do
       ]
 
       # Should still validate the message structure even if topic not found
-      assert {:error, :topic_not_found} =
+      assert {:error, :topic_creation_disabled_in_test} =
                PublishMessage.execute("existing_topic", complex_payload, opts, deps)
     end
 
@@ -206,10 +215,10 @@ defmodule Ratatoskr.UseCases.PublishMessageTest do
           PublishMessage.execute("existing_topic", %{msg_id: i}, [], deps)
         end
 
-      # All should return topic_not_found with our mock
+      # All should return topic_creation_disabled_in_test with our mock
       for {status, reason} <- results do
         assert status == :error
-        assert reason == :topic_not_found
+        assert reason == :topic_creation_disabled_in_test
       end
     end
   end

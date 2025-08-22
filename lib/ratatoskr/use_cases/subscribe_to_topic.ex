@@ -68,7 +68,7 @@ defmodule Ratatoskr.UseCases.SubscribeToTopic do
     Subscription.new(topic_name, subscriber_pid, opts)
   end
 
-  defp ensure_topic_exists(topic_name, %{registry: registry}) do
+  defp ensure_topic_exists(topic_name, %{registry: registry}) when not is_nil(registry) do
     case registry.lookup_topic(topic_name) do
       {:ok, pid} ->
         {:ok, pid}
@@ -78,8 +78,14 @@ defmodule Ratatoskr.UseCases.SubscribeToTopic do
     end
   end
 
-  defp find_topic(topic_name, %{registry: registry}) do
-    registry.lookup_topic(topic_name)
+  defp find_topic(topic_name, %{registry: registry}) when not is_nil(registry) do
+    case registry.lookup_topic(topic_name) do
+      {:ok, pid} ->
+        {:ok, pid}
+
+      {:error, :not_found} ->
+        {:error, :topic_not_found}
+    end
   end
 
   defp validate_subscription_limits(topic_pid, subscription) do

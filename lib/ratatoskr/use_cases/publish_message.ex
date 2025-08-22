@@ -56,7 +56,7 @@ defmodule Ratatoskr.UseCases.PublishMessage do
     Message.new(topic_name, payload, opts)
   end
 
-  defp find_or_create_topic(topic_name, %{registry: registry}) do
+  defp find_or_create_topic(topic_name, %{registry: registry}) when not is_nil(registry) do
     case registry.lookup_topic(topic_name) do
       {:ok, pid} ->
         {:ok, pid}

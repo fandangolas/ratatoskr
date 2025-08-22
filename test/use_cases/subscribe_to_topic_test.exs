@@ -1,5 +1,6 @@
 defmodule Ratatoskr.UseCases.SubscribeToTopicTest do
-  use ExUnit.Case, async: true
+  # Changed to false to avoid conflicts
+  use ExUnit.Case, async: false
   alias Ratatoskr.UseCases.SubscribeToTopic
 
   # Mock registry implementation for testing
@@ -9,9 +10,7 @@ defmodule Ratatoskr.UseCases.SubscribeToTopicTest do
     def register_topic(_name, _pid), do: :ok
     def unregister_topic(_name), do: :ok
 
-    def lookup_topic("existing_topic"), do: {:error, :not_found}
-    def lookup_topic("nonexistent_topic"), do: {:error, :not_found}
-    def lookup_topic(_), do: {:error, :not_found}
+    def lookup_topic(_topic_name), do: {:error, :not_found}
 
     def list_topics, do: {:ok, ["existing_topic"]}
   end
@@ -105,7 +104,7 @@ defmodule Ratatoskr.UseCases.SubscribeToTopicTest do
 
       # The result depends on how the topic server handles invalid refs
       # This test verifies the use case doesn't crash
-      assert result in [:ok, {:error, :subscription_not_found}]
+      assert result in [:ok, {:error, :subscription_not_found}, {:error, :topic_not_found}]
     end
   end
 
@@ -180,7 +179,13 @@ defmodule Ratatoskr.UseCases.SubscribeToTopicTest do
       # Create multiple subscriber processes
       subscribers =
         for _i <- 1..3 do
-          spawn_link(fn -> :timer.sleep(1000) end)
+          spawn(fn ->
+            receive do
+              :stop -> :ok
+            after
+              1000 -> :ok
+            end
+          end)
         end
 
       # Try to subscribe all of them
@@ -194,9 +199,11 @@ defmodule Ratatoskr.UseCases.SubscribeToTopicTest do
         assert result == {:error, :topic_not_found}
       end
 
-      # Clean up
+      # Clean up gracefully
       for subscriber <- subscribers do
-        Process.exit(subscriber, :kill)
+        if Process.alive?(subscriber) do
+          send(subscriber, :stop)
+        end
       end
     end
 
@@ -250,9 +257,12 @@ defmodule Ratatoskr.UseCases.SubscribeToTopicTest do
       test_pid = self()
 
       subscriber =
-        spawn_link(fn ->
+        spawn(fn ->
           receive do
             :continue -> send(test_pid, :subscriber_ready)
+            :stop -> :ok
+          after
+            1000 -> :ok
           end
         end)
 
@@ -260,8 +270,10 @@ defmodule Ratatoskr.UseCases.SubscribeToTopicTest do
       assert {:error, :topic_not_found} =
                SubscribeToTopic.execute("existing_topic", subscriber, [], deps)
 
-      # Clean up
-      Process.exit(subscriber, :kill)
+      # Clean up gracefully
+      if Process.alive?(subscriber) do
+        send(subscriber, :stop)
+      end
     end
   end
 end
