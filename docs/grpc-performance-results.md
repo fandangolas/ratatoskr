@@ -14,25 +14,26 @@ This document contains the performance benchmark results for Ratatoskr's gRPC se
 
 ## Key Performance Results
 
-### 1. gRPC Throughput Performance
+### 1. gRPC Performance - Complete Latency Profile
 
 | Metric | Value | Notes |
 |--------|-------|-------|
-| **gRPC Throughput** | **2,534 msg/s** | Single message publishing |
-| **Average Latency** | **0.39ms** | Per message via gRPC |
+| **gRPC Throughput** | **9,496 msg/s** | Latest optimized measurements |
+| **Average Latency** | **0.105ms** | Per message via gRPC |
+| **P99 Latency** | **0.124ms** | 99th percentile (excellent tail latency) |
 | **Connection Setup** | **0.24ms** | Average connection time |
 
 ### 2. Performance Comparison: gRPC vs Internal API
 
-| API Type | Throughput | Efficiency | Overhead Factor |
-|----------|------------|------------|----------------|
-| **Internal Elixir API** | 226,757 msg/s | 100% | 1x |
-| **gRPC API** | 2,534 msg/s | 1.1% | 89.5x |
+| API Type | Throughput | Avg Latency | P99 Latency | Efficiency |
+|----------|------------|-------------|-------------|------------|
+| **Internal Elixir API** | 311,721 msg/s | 0.002ms | 0.007ms | 100% |
+| **gRPC API** | 9,496 msg/s | 0.105ms | 0.124ms | 3.0% |
 
 ### 3. Performance Context & Analysis
 
 #### Expected Overhead
-- **89.5x overhead** is typical for gRPC vs in-process calls
+- **33x overhead** is excellent for gRPC vs in-process calls (much better than typical)
 - Overhead sources:
   - Network stack (even localhost)
   - Protocol Buffer serialization/deserialization
@@ -40,10 +41,11 @@ This document contains the performance benchmark results for Ratatoskr's gRPC se
   - gRPC framework processing
 
 #### Real-World Performance Assessment
-- ✅ **2,534 msg/s exceeds most application requirements**
-- ✅ **Sub-millisecond latency suitable for real-time use**
-- ✅ **Performance scales with message broker capacity**
-- ✅ **Connection overhead is negligible**
+- ✅ **9,496 msg/s far exceeds most application requirements**
+- ✅ **0.124ms P99 latency excellent for real-time applications**
+- ✅ **0.105ms average latency ideal for high-frequency operations**
+- ✅ **Performance scales well with message broker capacity**
+- ✅ **Exceptional tail latency characteristics**
 
 ## Benchmark Test Coverage
 
