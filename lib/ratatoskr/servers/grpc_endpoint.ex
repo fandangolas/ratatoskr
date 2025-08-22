@@ -25,7 +25,7 @@ defmodule Ratatoskr.Servers.GrpcEndpoint do
       {:ok, server_pid} ->
         Logger.info("gRPC server started successfully on port #{port}")
         {:ok, %{port: port, server_pid: server_pid}}
-        
+
       {:error, reason} ->
         Logger.error("Failed to start gRPC server: #{inspect(reason)}")
         {:stop, reason}
@@ -34,12 +34,12 @@ defmodule Ratatoskr.Servers.GrpcEndpoint do
 
   defp start_grpc_server(port) do
     # Start the gRPC server supervisor with our service
-    GRPC.Server.Supervisor.start_link([
+    GRPC.Server.Supervisor.start_link(
       port: port,
       start_server: true,
       adapter_opts: [ip: {0, 0, 0, 0}],
       servers: [Ratatoskr.Interfaces.Grpc.Server]
-    ])
+    )
   end
 
   @impl true
