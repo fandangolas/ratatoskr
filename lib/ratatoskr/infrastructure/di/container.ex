@@ -214,7 +214,6 @@ defmodule Ratatoskr.Infrastructure.DI.Container do
     Logger.warning("Invalid dependency configuration: #{inspect(invalid)}")
   end
 
-
   @doc """
   Performs health checks on all managed dependencies.
   """
