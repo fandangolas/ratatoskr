@@ -35,45 +35,7 @@ mix run --no-halt
 # Server starts on localhost:50051
 ```
 
-**2. Connect from Python (or any gRPC-supported language):**
-
-```python
-# Install: pip install grpcio grpcio-tools
-import grpc
-import ratatoskr_pb2_grpc as pb_grpc
-import ratatoskr_pb2 as pb
-import json
-
-# Connect to Ratatoskr
-channel = grpc.insecure_channel('localhost:50051')
-client = pb_grpc.MessageBrokerStub(channel)
-
-# Create a topic
-client.CreateTopic(pb.CreateTopicRequest(name="orders"))
-
-# Publish a message
-order_data = json.dumps({"id": 123, "amount": 99.90, "currency": "USD"})
-response = client.Publish(pb.PublishRequest(
-    topic="orders",
-    payload=order_data.encode(),
-    metadata={"type": "order", "source": "api"}
-))
-print(f"Published message: {response.message_id}")
-
-# Subscribe to messages (streaming)
-stream = client.Subscribe(pb.SubscribeRequest(
-    topic="orders",
-    subscriber_id="my-service"
-))
-
-for message in stream:
-    order = json.loads(message.payload.decode())
-    print(f"Received order: {order}")
-```
-
-## 🔌 gRPC Integration
-
-Ratatoskr uses gRPC for high-performance, multi-language client support:
+**2. Connect from any language via gRPC:**
 
 ```go
 // Connect from Go, Java, Python, C++, and more
