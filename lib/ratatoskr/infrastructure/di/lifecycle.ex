@@ -232,27 +232,6 @@ defmodule Ratatoskr.Infrastructure.DI.Lifecycle do
     end
   end
 
-  defp create_singleton_instance(key, state) do
-    case Map.get(state.configs, key) do
-      nil ->
-        {:reply, {:error, :not_registered}, state}
-
-      config when config.scope != :singleton ->
-        {:reply, {:error, :wrong_scope}, state}
-
-      config ->
-        case create_instance(config) do
-          {:ok, instance} ->
-            new_singletons = Map.put(state.singletons, key, instance)
-            new_state = %{state | singletons: new_singletons}
-            {:reply, {:ok, instance}, new_state}
-
-          {:error, reason} ->
-            {:reply, {:error, reason}, state}
-        end
-    end
-  end
-
   @impl true
   def handle_call({:get_process_scoped, key, pid}, _from, state) do
     process_deps = Map.get(state.process_scoped, pid, %{})
@@ -327,6 +306,27 @@ defmodule Ratatoskr.Infrastructure.DI.Lifecycle do
     end)
 
     {:reply, :ok, state}
+  end
+
+  defp create_singleton_instance(key, state) do
+    case Map.get(state.configs, key) do
+      nil ->
+        {:reply, {:error, :not_registered}, state}
+
+      config when config.scope != :singleton ->
+        {:reply, {:error, :wrong_scope}, state}
+
+      config ->
+        case create_instance(config) do
+          {:ok, instance} ->
+            new_singletons = Map.put(state.singletons, key, instance)
+            new_state = %{state | singletons: new_singletons}
+            {:reply, {:ok, instance}, new_state}
+
+          {:error, reason} ->
+            {:reply, {:error, reason}, state}
+        end
+    end
   end
 
   @impl true
