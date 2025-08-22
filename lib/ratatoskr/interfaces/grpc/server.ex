@@ -219,11 +219,11 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
     Logger.debug("gRPC Subscribe to: #{request.topic}, subscriber: #{request.subscriber_id}")
 
     # Check if topic exists first
-    unless ManageTopics.exists?(request.topic, Container.deps()) do
+    if ManageTopics.exists?(request.topic, Container.deps()) do
+      handle_valid_subscription(request, stream)
+    else
       GRPC.Server.send_reply(stream, {:error, "Topic does not exist: #{request.topic}"})
       :ok
-    else
-      handle_valid_subscription(request, stream)
     end
   end
 

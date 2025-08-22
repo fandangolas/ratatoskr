@@ -173,9 +173,8 @@ defmodule Ratatoskr.Core.Logic.Topic do
         _ -> []
       end
 
-    with :ok <- validate_partitions(Keyword.get(config_list, :partitions, 1)),
-         :ok <- validate_max_subscribers(Keyword.get(config_list, :max_subscribers, 1000)) do
-      :ok
+    with :ok <- validate_partitions(Keyword.get(config_list, :partitions, 1)) do
+      validate_max_subscribers(Keyword.get(config_list, :max_subscribers, 1000))
     end
   end
 
