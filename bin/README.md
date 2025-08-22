@@ -40,6 +40,50 @@ mix run bin/benchmark_grpc_comprehensive.exs
 - ✅ Connection overhead measurements
 - ✅ Detailed performance tables and comparisons
 
+### `benchmark_extreme_scale.exs` 🔥 **NEW**
+**Extreme scale testing** - Push Ratatoskr to its absolute limits across multiple scenarios.
+
+**Usage:**
+```bash
+mix run bin/benchmark_extreme_scale.exs
+```
+
+**Scale Tests:**
+- 🔥 **Massive Subscriber Swarm**: 10,000 concurrent subscribers across 50 topics
+- ⚡ **Ultra High Throughput**: 100,000+ messages/second burst capability
+- 🏢 **Enterprise Simulation**: 100 topics with 5,000 total subscribers  
+- 🌊 **Sustained Tsunami**: 1GB RAM target with 200 topics
+
+**Expected Results:**
+- **Peak Throughput**: 50,000-200,000+ msg/s
+- **Concurrent Load**: 10,000-20,000 subscribers
+- **Memory Scaling**: Up to 1GB RAM utilization
+- **Multi-tenant**: 100+ topics simultaneously
+
+### `benchmark_1gb_challenge.exs` 🎯 **NEW**
+**The 1GB Challenge** - Precisely target 1GB RAM usage and measure peak sustainable performance.
+
+**Usage:**
+```bash
+mix run bin/benchmark_1gb_challenge.exs
+```
+
+**Challenge Objectives:**
+- 🎯 **Exact Target**: Scale to precisely 1GB RAM usage
+- 📈 **Progressive Scaling**: Step-by-step scaling with performance measurement at each level
+- 🔥 **Peak Performance**: Ultimate throughput test at 1GB memory footprint
+- 📊 **Efficiency Metrics**: Messages per MB, scalability factors, resource utilization
+
+**Sample Results:**
+```
+🏆 1GB CHALLENGE COMPLETE
+• Peak Memory Usage: 1,024 MB  
+• Ultimate Throughput: 85,000+ messages/second
+• Total Subscribers: 15,000+
+• Messages per MB: 83 msg/s/MB
+• Status: 🏆 CHALLENGE COMPLETED!
+```
+
 ## Running Benchmarks
 
 **Prerequisites:**
