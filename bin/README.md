@@ -84,6 +84,53 @@ mix run bin/benchmark_1gb_challenge.exs
 • Status: 🏆 CHALLENGE COMPLETED!
 ```
 
+### `benchmark_4gb_ultimate.exs` 🔥 **ULTIMATE**
+**The Ultimate 4GB Challenge** - Maximum enterprise scale with 4GB RAM target.
+
+**Usage:**
+```bash
+mix run bin/benchmark_4gb_ultimate.exs
+```
+
+**Ultimate Objectives:**
+- 🔥 **Maximum Scale**: Push to 4GB RAM for absolute peak performance
+- 🏢 **Enterprise Grade**: 500 topics with 30,000+ concurrent subscribers
+- ⚡ **Peak Throughput**: Target 200,000+ messages/second
+- 🚀 **Concurrent Publishing**: 20 parallel publisher processes
+- 📊 **Ultimate Metrics**: Maximum scalability demonstration
+
+**Expected Ultimate Results:**
+```
+🏆 ULTIMATE 4GB CHALLENGE COMPLETE
+• Peak Memory Usage: 4,096 MB
+• ULTIMATE THROUGHPUT: 200,000+ messages/second
+• Total Subscribers: 30,000+
+• Total Topics: 500
+• Performance Tier: 🔥 EXTREME ENTERPRISE
+```
+
+### `benchmark_comprehensive_scaling.exs` 📊 **COMPLETE ANALYSIS**
+**Comprehensive scaling analysis** - Execute all three tiers and generate comparison table.
+
+**Usage:**
+```bash
+mix run bin/benchmark_comprehensive_scaling.exs
+```
+
+**Complete Analysis:**
+- 📊 **Three-Tier Testing**: 25MB Baseline → 1GB Enterprise → 4GB Ultimate
+- 📈 **Scaling Analysis**: Throughput, memory, and subscriber scaling factors
+- 📝 **README Generation**: Automatic table generation for documentation
+- 🎯 **Performance Classification**: Tier-based performance categorization
+
+**Sample Scaling Table:**
+```
+Tier                 Memory    Topics  Subscribers  Throughput    Efficiency
+25MB Baseline        25MB      1       200          9,500/s       380/MB
+1GB Enterprise       1024MB    100     15,000       85,000/s      83/MB  
+4GB Ultimate         4096MB    500     30,000       200,000/s     49/MB
+```
+
 ## Running Benchmarks
 
 **Prerequisites:**
