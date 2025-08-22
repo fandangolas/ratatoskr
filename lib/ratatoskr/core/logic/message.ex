@@ -9,7 +9,7 @@ defmodule Ratatoskr.Core.Logic.Message do
   alias Ratatoskr.Core.Models.Message, as: MessageModel
 
   @type t :: MessageModel.t()
-  
+
   defstruct [
     :id,
     :topic,

@@ -1,7 +1,7 @@
 defmodule Ratatoskr.Core.Models.Message do
   @moduledoc """
   Type definitions and struct for Message domain entity.
-  
+
   Defines the core data structure for messages in the Ratatoskr message broker.
   """
 

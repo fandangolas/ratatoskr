@@ -1,7 +1,7 @@
 defmodule Ratatoskr.Core.Models.Topic do
   @moduledoc """
   Type definitions and struct for Topic domain entity.
-  
+
   Defines the core data structure for topics in the Ratatoskr message broker.
   """
 

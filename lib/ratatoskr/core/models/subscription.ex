@@ -1,7 +1,7 @@
 defmodule Ratatoskr.Core.Models.Subscription do
   @moduledoc """
   Type definitions and struct for Subscription domain entity.
-  
+
   Defines the core data structure for subscriptions in the Ratatoskr message broker.
   """
 
