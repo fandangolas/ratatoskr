@@ -11,7 +11,7 @@ Process.sleep(2000)
 IO.puts("=== Ratatoskr gRPC P99 Latency Benchmark ===")
 
 # Connect to gRPC server
-{:ok, channel} = GRPC.Stub.connect("localhost:50051")
+{:ok, channel} = GRPC.Stub.connect("localhost:9090")
 
 # Create test topic
 {:ok, _} = Ratatoskr.create_topic("p99-benchmark")

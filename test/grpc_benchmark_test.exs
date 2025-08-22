@@ -15,7 +15,7 @@ defmodule Ratatoskr.GrpcBenchmarkTest do
 
   # Test configuration
   @grpc_host "localhost"
-  @grpc_port 50_051
+  @grpc_port 9090
   @benchmark_topic "benchmark-topic"
   @warmup_messages 100
 
