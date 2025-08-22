@@ -191,11 +191,4 @@ defmodule Ratatoskr.Core.Topic do
   defp validate_max_subscribers(max) when is_integer(max) and max > 0, do: :ok
   defp validate_max_subscribers(:unlimited), do: :ok
   defp validate_max_subscribers(_), do: {:error, :invalid_max_subscribers}
-
-  defp validate_config_map(config) when is_map(config) do
-    # Add specific config validation rules here as needed
-    :ok
-  end
-
-  defp validate_config_map(_), do: {:error, :config_must_be_map}
 end
