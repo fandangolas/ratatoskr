@@ -16,7 +16,10 @@ defmodule Ratatoskr.Application do
       {DynamicSupervisor, strategy: :one_for_one, name: Ratatoskr.Topic.Supervisor},
 
       # Broker coordinator
-      Ratatoskr.Broker
+      Ratatoskr.Broker,
+
+      # gRPC server
+      {GRPC.Server.Supervisor, endpoint: Ratatoskr.Endpoint, port: 50051, start_server: true}
     ]
 
     opts = [strategy: :one_for_one, name: Ratatoskr.Supervisor]
