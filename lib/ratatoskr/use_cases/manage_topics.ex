@@ -14,16 +14,25 @@ defmodule Ratatoskr.UseCases.ManageTopics do
 
   @doc """
   Creates a new topic.
+
+  Options:
+  - :allow_existing - If true, returns {:ok, pid} for existing topics. If false, returns {:error, :already_exists} (default: false)
   """
   @spec create(String.t(), keyword(), deps()) :: {:ok, pid()} | {:error, reason :: atom()}
   def create(topic_name, opts \\ [], %{registry: registry} = _deps) do
+    allow_existing = Keyword.get(opts, :allow_existing, false)
+
     with {:ok, topic} <- Topic.new(topic_name, opts),
          {:ok, topic_pid} <- start_topic_server(topic),
          :ok <- register_topic(topic_name, topic_pid, registry) do
       {:ok, topic_pid}
     else
       {:error, {:already_started, pid}} ->
-        {:ok, pid}
+        if allow_existing do
+          {:ok, pid}
+        else
+          {:error, :already_exists}
+        end
 
       {:error, _reason} = error ->
         error
@@ -83,7 +92,7 @@ defmodule Ratatoskr.UseCases.ManageTopics do
   defp start_topic_server(topic) do
     case TopicServer.start_link(topic) do
       {:ok, pid} -> {:ok, pid}
-      {:error, {:already_started, pid}} -> {:ok, pid}
+      {:error, {:already_started, pid}} -> {:error, {:already_started, pid}}
       error -> error
     end
   end

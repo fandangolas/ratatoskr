@@ -148,8 +148,15 @@ defmodule Ratatoskr.Core.TopicTest do
     end
 
     test "handles topic server operations directly" do
-      # This test is for direct server operations, so we test valid operations
-      assert :ok = TopicServer.health_check(self())
+      # Create a topic and test health check on the actual topic server
+      {:ok, topic} = Topic.new("health_check_test")
+      {:ok, topic_pid} = TopicServer.start_link(topic)
+
+      # Now health check the actual topic server process
+      assert :ok = TopicServer.health_check(topic_pid)
+
+      # Clean up
+      GenServer.stop(topic_pid)
     end
 
     test "preserves message order (FIFO)", %{topic_name: topic_name, topic_pid: topic_pid} do

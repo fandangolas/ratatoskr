@@ -143,7 +143,7 @@ defmodule Ratatoskr.Interfaces.GrpcTest do
       assert response.timestamp > 0
     end
 
-    test "handles publishing to non-existent topic" do
+    test "handles publishing to non-existent topic by auto-creating it" do
       request = %PublishRequest{
         topic: "non-existent-topic",
         payload: "test message",
@@ -152,8 +152,12 @@ defmodule Ratatoskr.Interfaces.GrpcTest do
 
       response = Ratatoskr.Interfaces.Grpc.Server.publish(request, %GRPC.Server.Stream{})
 
-      assert %PublishResponse{success: false} = response
-      assert response.error != ""
+      assert %PublishResponse{success: true} = response
+      assert response.message_id != ""
+      assert response.error == ""
+
+      # Verify topic was auto-created
+      assert Ratatoskr.topic_exists?("non-existent-topic")
     end
 
     test "publishes batch via gRPC" do
@@ -182,12 +186,12 @@ defmodule Ratatoskr.Interfaces.GrpcTest do
       assert Enum.all?(results, & &1.success)
     end
 
-    test "handles mixed success/failure in batch" do
+    test "handles batch publish with auto-topic creation" do
       {:ok, _} = Ratatoskr.create_topic("batch-topic")
 
       messages = [
         %PublishRequest{topic: "batch-topic", payload: "msg1", metadata: %{}},
-        %PublishRequest{topic: "non-existent", payload: "msg2", metadata: %{}},
+        %PublishRequest{topic: "auto-created-topic", payload: "msg2", metadata: %{}},
         %PublishRequest{topic: "batch-topic", payload: "msg3", metadata: %{}}
       ]
 
@@ -199,16 +203,19 @@ defmodule Ratatoskr.Interfaces.GrpcTest do
       response = Ratatoskr.Interfaces.Grpc.Server.publish_batch(request, %GRPC.Server.Stream{})
 
       assert %PublishBatchResponse{
-               success_count: 2,
-               error_count: 1,
+               success_count: 3,
+               error_count: 0,
                results: results
              } = response
 
       assert length(results) == 3
-      # First and third should succeed, second should fail
+      # All should succeed (including auto-created topic)
       assert Enum.at(results, 0).success == true
-      assert Enum.at(results, 1).success == false
+      assert Enum.at(results, 1).success == true
       assert Enum.at(results, 2).success == true
+
+      # Verify auto-created topic exists
+      assert Ratatoskr.topic_exists?("auto-created-topic")
     end
   end
 
@@ -490,7 +497,7 @@ defmodule Ratatoskr.Interfaces.GrpcTest do
   end
 
   describe "gRPC Error Handling" do
-    test "handles publish to topic that gets deleted during operation" do
+    test "handles publish to topic that gets deleted by auto-recreating it" do
       {:ok, _} = Ratatoskr.create_topic("temp-topic")
 
       # Delete the topic to simulate race condition
@@ -504,16 +511,21 @@ defmodule Ratatoskr.Interfaces.GrpcTest do
 
       response = Ratatoskr.Interfaces.Grpc.Server.publish(request, %GRPC.Server.Stream{})
 
-      assert %PublishResponse{success: false} = response
-      assert response.error != ""
+      # Should succeed due to auto-creation
+      assert %PublishResponse{success: true} = response
+      assert response.message_id != ""
+      assert response.error == ""
+
+      # Verify topic was auto-recreated
+      assert Ratatoskr.topic_exists?("temp-topic")
     end
 
-    test "handles batch publish with some invalid topics" do
+    test "handles batch publish with auto-topic creation for all topics" do
       {:ok, _} = Ratatoskr.create_topic("valid-batch-topic")
 
       messages = [
         %PublishRequest{topic: "valid-batch-topic", payload: "msg1", metadata: %{}},
-        %PublishRequest{topic: "invalid-topic", payload: "msg2", metadata: %{}},
+        %PublishRequest{topic: "auto-created-in-batch", payload: "msg2", metadata: %{}},
         %PublishRequest{topic: "valid-batch-topic", payload: "msg3", metadata: %{}}
       ]
 
@@ -525,15 +537,18 @@ defmodule Ratatoskr.Interfaces.GrpcTest do
       response = Ratatoskr.Interfaces.Grpc.Server.publish_batch(request, %GRPC.Server.Stream{})
 
       assert %PublishBatchResponse{
-               success_count: 2,
-               error_count: 1,
+               success_count: 3,
+               error_count: 0,
                results: results
              } = response
 
       assert length(results) == 3
       assert Enum.at(results, 0).success == true
-      assert Enum.at(results, 1).success == false
+      assert Enum.at(results, 1).success == true
       assert Enum.at(results, 2).success == true
+
+      # Verify auto-created topic exists
+      assert Ratatoskr.topic_exists?("auto-created-in-batch")
     end
 
     test "handles create topic with empty name" do

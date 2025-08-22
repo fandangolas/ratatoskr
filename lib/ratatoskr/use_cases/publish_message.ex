@@ -63,7 +63,9 @@ defmodule Ratatoskr.UseCases.PublishMessage do
 
       {:error, :not_found} ->
         # Delegate topic creation to ManageTopics use case
-        Ratatoskr.UseCases.ManageTopics.create(topic_name, [], %{registry: registry})
+        Ratatoskr.UseCases.ManageTopics.create(topic_name, [allow_existing: true], %{
+          registry: registry
+        })
     end
   end
 

@@ -93,6 +93,10 @@ defmodule Ratatoskr.Servers.BrokerServer do
         new_state = %{state | topic_count: state.topic_count + 1}
         {:reply, {:ok, topic_name}, new_state}
 
+      {:error, :already_exists} ->
+        Logger.warning("Failed to create topic #{topic_name}: already_exists")
+        {:reply, {:error, :topic_already_exists}, state}
+
       {:error, reason} = error ->
         Logger.warning("Failed to create topic #{topic_name}: #{reason}")
         {:reply, error, state}

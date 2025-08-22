@@ -133,13 +133,20 @@ defmodule RatatoskrTest do
     test "handles operations on non-existent topics" do
       nonexistent = "nonexistent_#{:rand.uniform(1000)}"
 
-      assert {:error, :topic_not_found} = Ratatoskr.publish(nonexistent, %{})
-      assert {:error, :topic_not_found} = Ratatoskr.subscribe(nonexistent)
-      assert {:error, :topic_not_found} = Ratatoskr.stats(nonexistent)
+      # Publish should succeed by auto-creating the topic
+      assert {:ok, _message_id} = Ratatoskr.publish(nonexistent, %{})
+
+      # Verify topic was auto-created
+      assert Ratatoskr.topic_exists?(nonexistent)
+
+      # Other operations on truly non-existent topics should fail
+      nonexistent2 = "nonexistent2_#{:rand.uniform(1000)}"
+      assert {:error, :topic_not_found} = Ratatoskr.subscribe(nonexistent2)
+      assert {:error, :topic_not_found} = Ratatoskr.stats(nonexistent2)
 
       # These should also handle gracefully
       fake_ref = make_ref()
-      assert {:error, :topic_not_found} = Ratatoskr.unsubscribe(nonexistent, fake_ref)
+      assert {:error, :topic_not_found} = Ratatoskr.unsubscribe(nonexistent2, fake_ref)
     end
 
     test "handles invalid subscription references" do

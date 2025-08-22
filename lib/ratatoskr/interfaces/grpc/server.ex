@@ -243,26 +243,27 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
     Logger.debug("gRPC Unsubscribe from: #{request.topic}, ref: #{request.subscription_ref}")
 
     # Parse subscription reference from gRPC format
-    case Subscription.deserialize_reference(request.subscription_ref) do
-      {:ok, ref} ->
-        case SubscribeToTopic.unsubscribe(request.topic, ref, @deps) do
-          :ok ->
-            %UnsubscribeResponse{
-              success: true,
-              error: ""
-            }
+    try do
+      ref = Subscription.deserialize_reference(request.subscription_ref)
 
-          {:error, reason} ->
-            %UnsubscribeResponse{
-              success: false,
-              error: to_string(reason)
-            }
-        end
+      case SubscribeToTopic.unsubscribe(request.topic, ref, @deps) do
+        :ok ->
+          %UnsubscribeResponse{
+            success: true,
+            error: ""
+          }
 
-      {:error, reason} ->
+        {:error, reason} ->
+          %UnsubscribeResponse{
+            success: false,
+            error: to_string(reason)
+          }
+      end
+    rescue
+      ArgumentError ->
         %UnsubscribeResponse{
           success: false,
-          error: "Invalid subscription reference: #{reason}"
+          error: "Invalid subscription reference"
         }
     end
   end
