@@ -11,15 +11,7 @@ defmodule Ratatoskr.Servers.BrokerServer do
   require Logger
 
   alias Ratatoskr.UseCases.ManageTopics
-
-  # Dependency injection configuration
-  @deps %{
-    registry: Ratatoskr.Infrastructure.Registry.ProcessRegistry,
-    # No persistence in MVP
-    storage: nil,
-    metrics: Ratatoskr.Infrastructure.Telemetry.MetricsCollector,
-    event_publisher: nil
-  }
+  alias Ratatoskr.Infrastructure.DI.Container
 
   # Public API
 
@@ -88,7 +80,7 @@ defmodule Ratatoskr.Servers.BrokerServer do
   def handle_call({:create_topic, topic_name, opts}, _from, state) do
     Logger.debug("Broker creating topic: #{topic_name}")
 
-    case ManageTopics.create(topic_name, opts, @deps) do
+    case ManageTopics.create(topic_name, opts, Container.deps()) do
       {:ok, _topic_pid} ->
         new_state = %{state | topic_count: state.topic_count + 1}
         {:reply, {:ok, topic_name}, new_state}
@@ -107,7 +99,7 @@ defmodule Ratatoskr.Servers.BrokerServer do
   def handle_call({:delete_topic, topic_name}, _from, state) do
     Logger.debug("Broker deleting topic: #{topic_name}")
 
-    case ManageTopics.delete(topic_name, @deps) do
+    case ManageTopics.delete(topic_name, Container.deps()) do
       :ok ->
         new_state = %{state | topic_count: max(0, state.topic_count - 1)}
         {:reply, :ok, new_state}
@@ -120,7 +112,7 @@ defmodule Ratatoskr.Servers.BrokerServer do
 
   @impl true
   def handle_call(:list_topics, _from, state) do
-    case ManageTopics.list(@deps) do
+    case ManageTopics.list(Container.deps()) do
       {:ok, topics} ->
         {:reply, {:ok, topics}, state}
 
@@ -132,13 +124,13 @@ defmodule Ratatoskr.Servers.BrokerServer do
 
   @impl true
   def handle_call({:topic_exists, topic_name}, _from, state) do
-    exists = ManageTopics.exists?(topic_name, @deps)
+    exists = ManageTopics.exists?(topic_name, Container.deps())
     {:reply, exists, state}
   end
 
   @impl true
   def handle_call({:stats, topic_name}, _from, state) do
-    case ManageTopics.stats(topic_name, @deps) do
+    case ManageTopics.stats(topic_name, Container.deps()) do
       {:ok, stats} ->
         {:reply, {:ok, stats}, state}
 

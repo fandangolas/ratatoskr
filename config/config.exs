@@ -2,6 +2,14 @@ import Config
 
 # Configuration for Ratatoskr message broker
 
+# Dependency injection configuration
+# Override default implementations by configuring specific dependencies
+# config :ratatoskr,
+#   registry: MyCustomRegistry,
+#   storage: MyStorageAdapter,
+#   metrics: MyMetricsCollector,
+#   event_publisher: MyEventPublisher
+
 # Logger configuration
 config :logger,
   level: :info,

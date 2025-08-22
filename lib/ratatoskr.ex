@@ -34,19 +34,11 @@ defmodule Ratatoskr do
 
   alias Ratatoskr.Servers.BrokerServer
   alias Ratatoskr.UseCases.{PublishMessage, SubscribeToTopic}
+  alias Ratatoskr.Infrastructure.DI.Container
 
   @type topic_name :: String.t()
   @type message_id :: String.t()
   @type subscription_ref :: reference()
-
-  # Dependency injection configuration
-  @deps %{
-    registry: Ratatoskr.Infrastructure.Registry.ProcessRegistry,
-    # No persistence in MVP
-    storage: nil,
-    metrics: Ratatoskr.Infrastructure.Telemetry.MetricsCollector,
-    event_publisher: nil
-  }
 
   @doc """
   Creates a new topic.
@@ -100,7 +92,7 @@ defmodule Ratatoskr do
     metadata = Keyword.get(opts, :metadata, %{})
     publish_opts = Keyword.put(opts, :metadata, metadata)
 
-    PublishMessage.execute(topic_name, payload, publish_opts, @deps)
+    PublishMessage.execute(topic_name, payload, publish_opts, Container.deps())
   end
 
   @doc """
@@ -128,7 +120,7 @@ defmodule Ratatoskr do
   @spec subscribe(topic_name(), pid()) :: {:ok, subscription_ref()} | {:error, term()}
   def subscribe(topic_name, subscriber_pid)
       when is_binary(topic_name) and is_pid(subscriber_pid) do
-    SubscribeToTopic.execute(topic_name, subscriber_pid, [], @deps)
+    SubscribeToTopic.execute(topic_name, subscriber_pid, [], Container.deps())
   end
 
   @doc """
@@ -142,7 +134,7 @@ defmodule Ratatoskr do
   @spec unsubscribe(topic_name(), subscription_ref()) :: :ok | {:error, term()}
   def unsubscribe(topic_name, subscription_ref)
       when is_binary(topic_name) and is_reference(subscription_ref) do
-    SubscribeToTopic.unsubscribe(topic_name, subscription_ref, @deps)
+    SubscribeToTopic.unsubscribe(topic_name, subscription_ref, Container.deps())
   end
 
   @doc """
