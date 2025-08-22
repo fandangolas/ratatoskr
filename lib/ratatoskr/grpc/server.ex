@@ -327,10 +327,6 @@ defmodule Ratatoskr.Grpc.Server do
 
   defp convert_metadata(_), do: %{}
 
-  defp encode_subscription_ref(ref) when is_reference(ref) do
-    ref |> :erlang.term_to_binary() |> Base.encode64()
-  end
-
   defp parse_subscription_ref(ref_string) when is_binary(ref_string) do
     try do
       # Try to decode base64 encoded reference term
