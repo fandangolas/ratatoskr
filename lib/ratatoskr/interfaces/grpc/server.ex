@@ -1,9 +1,9 @@
-defmodule Ratatoskr.Grpc.Server do
+defmodule Ratatoskr.Interfaces.Grpc.Server do
   @moduledoc """
-  gRPC server implementation for Ratatoskr message broker.
+  gRPC server interface adapter for Ratatoskr message broker.
 
   Implements the MessageBroker service defined in ratatoskr.proto,
-  bridging gRPC calls to the internal Elixir API.
+  adapting gRPC calls to use cases and converting between protocol types.
   """
 
   use GRPC.Server, service: Ratatoskr.Grpc.MessageBroker.Service
@@ -26,8 +26,20 @@ defmodule Ratatoskr.Grpc.Server do
     PublishBatchResponse,
     SubscribeRequest,
     UnsubscribeRequest,
-    UnsubscribeResponse,
-    Message
+    UnsubscribeResponse
+  }
+
+  alias Ratatoskr.UseCases.{PublishMessage, SubscribeToTopic, ManageTopics}
+  alias Ratatoskr.Interfaces.Grpc.Mappers
+  alias Ratatoskr.Core.Subscription
+
+  # Dependency injection - will be configured at startup
+  @deps %{
+    registry: Ratatoskr.Infrastructure.Registry.ProcessRegistry,
+    # No persistence in MVP
+    storage: nil,
+    metrics: Ratatoskr.Infrastructure.Telemetry.MetricsCollector,
+    event_publisher: nil
   }
 
   @doc """
@@ -37,10 +49,10 @@ defmodule Ratatoskr.Grpc.Server do
   def create_topic(request, _stream) do
     Logger.debug("gRPC CreateTopic: #{request.name}")
 
-    case Ratatoskr.create_topic(request.name) do
-      {:ok, topic} ->
+    case ManageTopics.create(request.name, [], @deps) do
+      {:ok, _topic_pid} ->
         %CreateTopicResponse{
-          topic: topic,
+          topic: request.name,
           created: true,
           error: ""
         }
@@ -61,7 +73,7 @@ defmodule Ratatoskr.Grpc.Server do
   def delete_topic(request, _stream) do
     Logger.debug("gRPC DeleteTopic: #{request.name}")
 
-    case Ratatoskr.delete_topic(request.name) do
+    case ManageTopics.delete(request.name, @deps) do
       :ok ->
         %DeleteTopicResponse{
           success: true,
@@ -83,7 +95,7 @@ defmodule Ratatoskr.Grpc.Server do
   def list_topics(_request, _stream) do
     Logger.debug("gRPC ListTopics")
 
-    case Ratatoskr.list_topics() do
+    case ManageTopics.list(@deps) do
       {:ok, topics} ->
         %ListTopicsResponse{topics: topics}
 
@@ -99,7 +111,7 @@ defmodule Ratatoskr.Grpc.Server do
   def topic_exists(request, _stream) do
     Logger.debug("gRPC TopicExists: #{request.name}")
 
-    exists = Ratatoskr.topic_exists?(request.name)
+    exists = ManageTopics.exists?(request.name, @deps)
     %TopicExistsResponse{exists: exists}
   end
 
@@ -110,7 +122,7 @@ defmodule Ratatoskr.Grpc.Server do
   def get_stats(request, _stream) do
     Logger.debug("gRPC GetStats: #{request.topic}")
 
-    case Ratatoskr.stats(request.topic) do
+    case ManageTopics.stats(request.topic, @deps) do
       {:ok, stats} ->
         %GetStatsResponse{
           topic: stats.topic,
@@ -136,16 +148,14 @@ defmodule Ratatoskr.Grpc.Server do
   def publish(request, _stream) do
     Logger.debug("gRPC Publish to: #{request.topic}")
 
-    # Convert protobuf metadata map to Elixir map
-    metadata = request.metadata |> Enum.into(%{})
+    # Convert gRPC request to domain format
+    metadata = Mappers.grpc_metadata_to_map(request.metadata)
 
-    # Create message payload - for gRPC we'll accept the binary payload directly
-    payload = %{
-      data: request.payload,
+    opts = [
       metadata: metadata
-    }
+    ]
 
-    case Ratatoskr.publish(request.topic, payload) do
+    case PublishMessage.execute(request.topic, request.payload, opts, @deps) do
       {:ok, message_id} ->
         %PublishResponse{
           message_id: message_id,
@@ -173,13 +183,14 @@ defmodule Ratatoskr.Grpc.Server do
 
     results =
       Enum.map(request.messages, fn msg ->
-        metadata = msg.metadata |> Enum.into(%{})
-        payload = %{data: msg.payload, metadata: metadata}
-
-        # Use the topic from individual message, not from the batch request
+        metadata = Mappers.grpc_metadata_to_map(msg.metadata)
         topic = if msg.topic != "", do: msg.topic, else: request.topic
 
-        case Ratatoskr.publish(topic, payload) do
+        opts = [
+          metadata: metadata
+        ]
+
+        case PublishMessage.execute(topic, msg.payload, opts, @deps) do
           {:ok, message_id} ->
             %PublishResponse{
               message_id: message_id,
@@ -215,30 +226,12 @@ defmodule Ratatoskr.Grpc.Server do
   def subscribe(request, stream) do
     Logger.debug("gRPC Subscribe to: #{request.topic}, subscriber: #{request.subscriber_id}")
 
-    # First check if topic exists
-    unless Ratatoskr.topic_exists?(request.topic) do
+    # Check if topic exists first
+    unless ManageTopics.exists?(request.topic, @deps) do
       GRPC.Server.send_reply(stream, {:error, "Topic does not exist: #{request.topic}"})
       :ok
     else
       handle_valid_subscription(request, stream)
-    end
-  end
-
-  defp handle_valid_subscription(request, stream) do
-    # Subscribe to the topic with a custom handler that sends to gRPC stream
-    case Ratatoskr.subscribe(request.topic) do
-      {:ok, subscription_ref} ->
-        Logger.debug("gRPC subscription established: #{subscription_ref}")
-
-        # Start a process to handle messages and forward them to the gRPC stream
-        spawn_link(fn -> handle_subscription(stream, subscription_ref, request.topic) end)
-
-        # Keep the stream alive by monitoring the subscription
-        :timer.sleep(:infinity)
-
-      {:error, reason} ->
-        Logger.error("gRPC subscription failed: #{reason}")
-        GRPC.Server.send_reply(stream, {:error, to_string(reason)})
     end
   end
 
@@ -249,10 +242,10 @@ defmodule Ratatoskr.Grpc.Server do
   def unsubscribe(request, _stream) do
     Logger.debug("gRPC Unsubscribe from: #{request.topic}, ref: #{request.subscription_ref}")
 
-    # Convert string representation back to reference
-    case parse_subscription_ref(request.subscription_ref) do
+    # Parse subscription reference from gRPC format
+    case Subscription.deserialize_reference(request.subscription_ref) do
       {:ok, ref} ->
-        case Ratatoskr.unsubscribe(request.topic, ref) do
+        case SubscribeToTopic.unsubscribe(request.topic, ref, @deps) do
           :ok ->
             %UnsubscribeResponse{
               success: true,
@@ -276,17 +269,34 @@ defmodule Ratatoskr.Grpc.Server do
 
   # Private functions
 
+  defp handle_valid_subscription(request, stream) do
+    # Create a subscription through the use case
+    opts = [
+      subscriber_id: if(request.subscriber_id != "", do: request.subscriber_id, else: nil),
+      metadata: %{grpc_stream: true}
+    ]
+
+    case SubscribeToTopic.execute(request.topic, self(), opts, @deps) do
+      {:ok, subscription_ref} ->
+        Logger.debug("gRPC subscription established: #{inspect(subscription_ref)}")
+
+        # Start a process to handle messages and forward them to the gRPC stream
+        spawn_link(fn -> handle_subscription(stream, subscription_ref, request.topic) end)
+
+        # Keep the stream alive by monitoring the subscription
+        :timer.sleep(:infinity)
+
+      {:error, reason} ->
+        Logger.error("gRPC subscription failed: #{reason}")
+        GRPC.Server.send_reply(stream, {:error, to_string(reason)})
+    end
+  end
+
   defp handle_subscription(stream, subscription_ref, topic) do
     receive do
       {:message, message} ->
-        # Convert internal message to gRPC message
-        grpc_message = %Message{
-          id: message.id,
-          topic: topic,
-          payload: get_message_payload(message.payload),
-          metadata: convert_metadata(message.metadata),
-          timestamp: message.timestamp
-        }
+        # Convert domain message to gRPC message
+        grpc_message = Mappers.domain_message_to_grpc(message, topic)
 
         # Send to gRPC stream
         GRPC.Server.send_reply(stream, grpc_message)
@@ -301,45 +311,6 @@ defmodule Ratatoskr.Grpc.Server do
       other ->
         Logger.debug("Unexpected message in subscription: #{inspect(other)}")
         handle_subscription(stream, subscription_ref, topic)
-    end
-  end
-
-  defp get_message_payload(payload) when is_map(payload) do
-    # If payload has binary data, use that; otherwise encode as JSON
-    case Map.get(payload, :data) do
-      data when is_binary(data) -> data
-      _ -> Jason.encode!(payload) |> :erlang.term_to_binary()
-    end
-  end
-
-  defp get_message_payload(payload) when is_binary(payload), do: payload
-
-  defp get_message_payload(payload) do
-    # Fallback: encode as JSON then to binary
-    Jason.encode!(payload) |> :erlang.term_to_binary()
-  end
-
-  defp convert_metadata(metadata) when is_map(metadata) do
-    metadata
-    |> Enum.map(fn {k, v} -> {to_string(k), to_string(v)} end)
-    |> Enum.into(%{})
-  end
-
-  defp convert_metadata(_), do: %{}
-
-  defp parse_subscription_ref(ref_string) when is_binary(ref_string) do
-    try do
-      # Try to decode base64 encoded reference term
-      decoded = Base.decode64!(ref_string)
-      ref = :erlang.binary_to_term(decoded)
-
-      if is_reference(ref) do
-        {:ok, ref}
-      else
-        {:error, "not a reference"}
-      end
-    rescue
-      _ -> {:error, "invalid format"}
     end
   end
 end

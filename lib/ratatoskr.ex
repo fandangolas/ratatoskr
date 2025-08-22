@@ -5,6 +5,9 @@ defmodule Ratatoskr do
   Named after the Norse mythology squirrel who carries messages between
   the eagle at the top of Yggdrasil and the dragon at its roots.
 
+  This is the main public API that provides a clean interface to the
+  message broker functionality using clean architecture principles.
+
   ## Usage
 
       # Start the broker (automatically started with the application)
@@ -14,10 +17,7 @@ defmodule Ratatoskr do
       {:ok, topic} = Ratatoskr.create_topic("orders")
       
       # Subscribe to messages
-      {:ok, subscription_ref} = Ratatoskr.subscribe("orders", fn message ->
-        IO.inspect(message)
-        :ack
-      end)
+      {:ok, subscription_ref} = Ratatoskr.subscribe("orders")
       
       # Publish a message
       {:ok, message_id} = Ratatoskr.publish("orders", %{id: 123, amount: 99.90})
@@ -32,13 +32,21 @@ defmodule Ratatoskr do
       :ok = Ratatoskr.delete_topic("orders")
   """
 
-  alias Ratatoskr.Broker
-  alias Ratatoskr.Topic.Server, as: TopicServer
+  alias Ratatoskr.Servers.BrokerServer
+  alias Ratatoskr.UseCases.{PublishMessage, SubscribeToTopic}
 
   @type topic_name :: String.t()
   @type message_id :: String.t()
   @type subscription_ref :: reference()
-  @type consumer_function :: (Ratatoskr.Message.t() -> :ack | :nack)
+
+  # Dependency injection configuration
+  @deps %{
+    registry: Ratatoskr.Infrastructure.Registry.ProcessRegistry,
+    # No persistence in MVP
+    storage: nil,
+    metrics: Ratatoskr.Infrastructure.Telemetry.MetricsCollector,
+    event_publisher: nil
+  }
 
   @doc """
   Creates a new topic.
@@ -50,7 +58,7 @@ defmodule Ratatoskr do
   """
   @spec create_topic(topic_name()) :: {:ok, topic_name()} | {:error, term()}
   def create_topic(topic_name) when is_binary(topic_name) do
-    Broker.create_topic(topic_name)
+    BrokerServer.create_topic(topic_name)
   end
 
   @doc """
@@ -63,7 +71,7 @@ defmodule Ratatoskr do
   """
   @spec delete_topic(topic_name()) :: :ok | {:error, term()}
   def delete_topic(topic_name) when is_binary(topic_name) do
-    Broker.delete_topic(topic_name)
+    BrokerServer.delete_topic(topic_name)
   end
 
   @doc """
@@ -75,7 +83,7 @@ defmodule Ratatoskr do
   """
   @spec list_topics() :: {:ok, list(topic_name())}
   def list_topics do
-    Broker.list_topics()
+    BrokerServer.list_topics()
   end
 
   @doc """
@@ -86,16 +94,20 @@ defmodule Ratatoskr do
       {:ok, message_id} = Ratatoskr.publish("orders", %{id: 123})
       {:error, :topic_not_found} = Ratatoskr.publish("nonexistent", %{})
   """
-  @spec publish(topic_name(), term(), map()) :: {:ok, message_id()} | {:error, term()}
-  def publish(topic_name, payload, metadata \\ %{}) when is_binary(topic_name) do
-    TopicServer.publish(topic_name, payload, metadata)
+  @spec publish(topic_name(), term(), keyword()) :: {:ok, message_id()} | {:error, term()}
+  def publish(topic_name, payload, opts \\ []) when is_binary(topic_name) do
+    # Extract metadata from opts for backward compatibility
+    metadata = Keyword.get(opts, :metadata, %{})
+    publish_opts = Keyword.put(opts, :metadata, metadata)
+
+    PublishMessage.execute(topic_name, payload, publish_opts, @deps)
   end
 
   @doc """
   Subscribes the calling process to receive messages from a topic.
 
   The subscriber process will receive messages in the format:
-  `{:message, %Ratatoskr.Message{}}`
+  `{:message, %Ratatoskr.Core.Message{}}`
 
   ## Examples
 
@@ -116,7 +128,7 @@ defmodule Ratatoskr do
   @spec subscribe(topic_name(), pid()) :: {:ok, subscription_ref()} | {:error, term()}
   def subscribe(topic_name, subscriber_pid)
       when is_binary(topic_name) and is_pid(subscriber_pid) do
-    TopicServer.subscribe(topic_name, subscriber_pid)
+    SubscribeToTopic.execute(topic_name, subscriber_pid, [], @deps)
   end
 
   @doc """
@@ -130,7 +142,7 @@ defmodule Ratatoskr do
   @spec unsubscribe(topic_name(), subscription_ref()) :: :ok | {:error, term()}
   def unsubscribe(topic_name, subscription_ref)
       when is_binary(topic_name) and is_reference(subscription_ref) do
-    TopicServer.unsubscribe(topic_name, subscription_ref)
+    SubscribeToTopic.unsubscribe(topic_name, subscription_ref, @deps)
   end
 
   @doc """
@@ -142,7 +154,7 @@ defmodule Ratatoskr do
   """
   @spec stats(topic_name()) :: {:ok, map()} | {:error, term()}
   def stats(topic_name) when is_binary(topic_name) do
-    TopicServer.stats(topic_name)
+    BrokerServer.stats(topic_name)
   end
 
   @doc """
@@ -155,6 +167,14 @@ defmodule Ratatoskr do
   """
   @spec topic_exists?(topic_name()) :: boolean()
   def topic_exists?(topic_name) when is_binary(topic_name) do
-    Broker.topic_exists?(topic_name)
+    BrokerServer.topic_exists?(topic_name)
+  end
+
+  @doc """
+  Gets broker health information.
+  """
+  @spec health() :: {:ok, map()} | {:error, term()}
+  def health do
+    BrokerServer.health_check()
   end
 end
