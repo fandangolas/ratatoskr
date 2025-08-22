@@ -35,49 +35,40 @@ mix run --no-halt
 # Server starts on localhost:50051
 ```
 
-**2. Connect from any language via gRPC:**
-
-```go
-// Go client example
-import "google.golang.org/grpc"
-
-conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
-client := pb.NewMessageBrokerClient(conn)
-
-// Create topic
-_, err = client.CreateTopic(ctx, &pb.CreateTopicRequest{Name: "orders"})
-
-// Publish message
-resp, err := client.Publish(ctx, &pb.PublishRequest{
-    Topic:   "orders",
-    Payload: orderData,
-    Metadata: map[string]string{"type": "order"},
-})
-
-// Subscribe to messages
-stream, err := client.Subscribe(ctx, &pb.SubscribeRequest{Topic: "orders"})
-for {
-    msg, err := stream.Recv()
-    // Process message...
-}
-```
+**2. Connect from Python (or any gRPC-supported language):**
 
 ```python
-# Python client example
+# Install: pip install grpcio grpcio-tools
 import grpc
 import ratatoskr_pb2_grpc as pb_grpc
 import ratatoskr_pb2 as pb
+import json
 
+# Connect to Ratatoskr
 channel = grpc.insecure_channel('localhost:50051')
 client = pb_grpc.MessageBrokerStub(channel)
 
-# Create topic and publish
+# Create a topic
 client.CreateTopic(pb.CreateTopicRequest(name="orders"))
+
+# Publish a message
+order_data = json.dumps({"id": 123, "amount": 99.90, "currency": "USD"})
 response = client.Publish(pb.PublishRequest(
     topic="orders",
-    payload=order_bytes,
-    metadata={"type": "order"}
+    payload=order_data.encode(),
+    metadata={"type": "order", "source": "api"}
 ))
+print(f"Published message: {response.message_id}")
+
+# Subscribe to messages (streaming)
+stream = client.Subscribe(pb.SubscribeRequest(
+    topic="orders",
+    subscriber_id="my-service"
+))
+
+for message in stream:
+    order = json.loads(message.payload.decode())
+    print(f"Received order: {order}")
 ```
 
 ## 🔌 gRPC Integration
