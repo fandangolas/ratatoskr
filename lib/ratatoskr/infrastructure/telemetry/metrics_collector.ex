@@ -103,11 +103,7 @@ defmodule Ratatoskr.Infrastructure.Telemetry.MetricsCollector do
   defp log_metric(event_name, measurements, metadata, _config) do
     require Logger
 
-    Logger.debug("Metric emitted",
-      event: event_name,
-      measurements: measurements,
-      metadata: metadata
-    )
+    Logger.debug("Metric emitted: #{inspect(event_name)} - #{inspect(measurements)} - #{inspect(metadata)}")
   end
 
   defp console_metric(event_name, measurements, metadata, _config) do
