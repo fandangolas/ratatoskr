@@ -20,10 +20,26 @@ defmodule Ratatoskr.Servers.GrpcEndpoint do
 
     Logger.info("Starting gRPC endpoint on port #{port}")
 
-    # For now, just skip gRPC server startup to avoid deprecation warnings
-    # FIXME: Implement proper GRPC.Endpoint when needed for production use
-    Logger.info("gRPC endpoint initialized (server disabled for clean compilation)")
-    {:ok, %{port: port}}
+    # Enable gRPC server for real testing
+    case start_grpc_server(port) do
+      {:ok, server_pid} ->
+        Logger.info("gRPC server started successfully on port #{port}")
+        {:ok, %{port: port, server_pid: server_pid}}
+
+      {:error, reason} ->
+        Logger.error("Failed to start gRPC server: #{inspect(reason)}")
+        {:stop, reason}
+    end
+  end
+
+  defp start_grpc_server(port) do
+    # Start the gRPC server supervisor with our service
+    GRPC.Server.Supervisor.start_link(
+      port: port,
+      start_server: true,
+      adapter_opts: [ip: {0, 0, 0, 0}],
+      servers: [Ratatoskr.Interfaces.Grpc.Server]
+    )
   end
 
   @impl true
