@@ -158,7 +158,8 @@ defmodule Ratatoskr.Infrastructure.Telemetry.MetricsCollector do
     queue_lengths =
       Process.list()
       |> Enum.map(&Process.info(&1, :message_queue_len))
-      |> Enum.reject(&is_nil/1)  # Filter out processes that died
+      # Filter out processes that died
+      |> Enum.reject(&is_nil/1)
       |> Enum.map(fn {_, len} -> len end)
       |> Enum.reject(&is_nil/1)
 

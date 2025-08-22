@@ -15,7 +15,7 @@ defmodule Ratatoskr.Servers.Application do
       # Infrastructure layer
       {Ratatoskr.Infrastructure.Registry.ProcessRegistry, []},
       {Ratatoskr.Infrastructure.Storage.EtsAdapter, []},
-      
+
       # Dependency injection lifecycle manager
       {Ratatoskr.Infrastructure.DI.Lifecycle, []},
 
@@ -32,7 +32,7 @@ defmodule Ratatoskr.Servers.Application do
       {:ok, pid} ->
         # Configure lifecycle dependencies
         Container.configure_lifecycle()
-        
+
         # Initialize telemetry
         setup_telemetry()
 
@@ -47,7 +47,7 @@ defmodule Ratatoskr.Servers.Application do
   def stop(_state) do
     # Shutdown managed dependencies
     Container.shutdown()
-    
+
     # Cleanup telemetry handlers
     Ratatoskr.Infrastructure.Telemetry.MetricsCollector.detach_handlers()
     :ok

@@ -108,9 +108,9 @@ defmodule Ratatoskr.Infrastructure.DI.Container do
 
   @doc """
   Gets a singleton instance, creating it if needed.
-  
+
   ## Examples
-  
+
       metrics = Container.get_singleton(:metrics)
       event_bus = Container.get_singleton(:event_bus)
   """
@@ -125,9 +125,9 @@ defmodule Ratatoskr.Infrastructure.DI.Container do
 
   @doc """
   Gets a process-scoped instance for the calling process.
-  
+
   ## Examples
-  
+
       cache = Container.get_process_scoped(:cache)
       session = Container.get_process_scoped(:user_session)
   """
@@ -142,9 +142,9 @@ defmodule Ratatoskr.Infrastructure.DI.Container do
 
   @doc """
   Creates a new transient instance every time.
-  
+
   ## Examples
-  
+
       worker = Container.get_transient(:worker)
       job = Container.get_transient(:background_job)
   """
@@ -159,21 +159,21 @@ defmodule Ratatoskr.Infrastructure.DI.Container do
 
   @doc """
   Registers lifecycle dependencies from configuration.
-  
+
   This is typically called during application startup.
   """
   @spec configure_lifecycle() :: :ok
   def configure_lifecycle do
     lifecycle_config = Application.get_env(:ratatoskr, :lifecycle, [])
-    
+
     # Register singletons
     singletons = Keyword.get(lifecycle_config, :singletons, [])
     register_dependencies(singletons, &Lifecycle.register_singleton/4)
-    
+
     # Register process-scoped dependencies
     process_scoped = Keyword.get(lifecycle_config, :process_scoped, [])
     register_dependencies(process_scoped, &Lifecycle.register_process_scoped/4)
-    
+
     :ok
   end
 
@@ -182,16 +182,21 @@ defmodule Ratatoskr.Infrastructure.DI.Container do
     Enum.each(deps, fn
       {key, module, args} when is_atom(key) and is_atom(module) and is_list(args) ->
         register_func.(key, module, args, [])
-      
-      {key, module, args, opts} when is_atom(key) and is_atom(module) and is_list(args) and is_list(opts) ->
+
+      {key, module, args, opts}
+      when is_atom(key) and is_atom(module) and is_list(args) and is_list(opts) ->
         register_func.(key, module, args, opts)
-      
-      {key, {module, function, base_args}, args} when is_atom(key) and is_atom(module) and is_atom(function) and is_list(base_args) and is_list(args) ->
+
+      {key, {module, function, base_args}, args}
+      when is_atom(key) and is_atom(module) and is_atom(function) and is_list(base_args) and
+             is_list(args) ->
         register_func.(key, {module, function, base_args}, args, [])
-      
-      {key, {module, function, base_args}, args, opts} when is_atom(key) and is_atom(module) and is_atom(function) and is_list(base_args) and is_list(args) and is_list(opts) ->
+
+      {key, {module, function, base_args}, args, opts}
+      when is_atom(key) and is_atom(module) and is_atom(function) and is_list(base_args) and
+             is_list(args) and is_list(opts) ->
         register_func.(key, {module, function, base_args}, args, opts)
-      
+
       invalid ->
         require Logger
         Logger.warning("Invalid dependency configuration: #{inspect(invalid)}")

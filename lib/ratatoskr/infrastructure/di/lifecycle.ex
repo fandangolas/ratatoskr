@@ -1,15 +1,15 @@
 defmodule Ratatoskr.Infrastructure.DI.Lifecycle do
   @moduledoc """
   Lifecycle management for dependency injection.
-  
+
   Handles different dependency scopes and initialization patterns:
   - Singleton: One instance per application
   - Transient: New instance every time  
   - Process-scoped: One instance per process
   - Request-scoped: One instance per request/operation
-  
+
   ## Usage
-  
+
       # Register a singleton
       Lifecycle.register_singleton(:metrics, MyMetrics, [])
       
@@ -25,22 +25,26 @@ defmodule Ratatoskr.Infrastructure.DI.Lifecycle do
 
   @type scope :: :singleton | :transient | :process_scoped | :request_scoped
   @type dependency_key :: atom()
-  @type module_or_fun :: module() | (() -> term()) | {module(), atom(), list()}
-  
+  @type module_or_fun :: module() | (-> term()) | {module(), atom(), list()}
+
   @type dependency_config :: %{
-    key: dependency_key(),
-    scope: scope(),
-    implementation: module_or_fun(),
-    args: list(),
-    lazy: boolean(),
-    health_check: (() -> boolean()) | nil
-  }
+          key: dependency_key(),
+          scope: scope(),
+          implementation: module_or_fun(),
+          args: list(),
+          lazy: boolean(),
+          health_check: (-> boolean()) | nil
+        }
 
   defstruct [
-    :singletons,      # %{key => instance}
-    :process_scoped,  # %{pid => %{key => instance}}
-    :configs,         # %{key => dependency_config}
-    :health_checks    # %{key => last_check_result}
+    # %{key => instance}
+    :singletons,
+    # %{pid => %{key => instance}}
+    :process_scoped,
+    # %{key => dependency_config}
+    :configs,
+    # %{key => last_check_result}
+    :health_checks
   ]
 
   # Public API
@@ -65,7 +69,7 @@ defmodule Ratatoskr.Infrastructure.DI.Lifecycle do
       lazy: Keyword.get(opts, :lazy, true),
       health_check: Keyword.get(opts, :health_check)
     }
-    
+
     GenServer.call(__MODULE__, {:register, config})
   end
 
@@ -82,7 +86,7 @@ defmodule Ratatoskr.Infrastructure.DI.Lifecycle do
       lazy: Keyword.get(opts, :lazy, true),
       health_check: Keyword.get(opts, :health_check)
     }
-    
+
     GenServer.call(__MODULE__, {:register, config})
   end
 
@@ -96,10 +100,11 @@ defmodule Ratatoskr.Infrastructure.DI.Lifecycle do
       scope: :transient,
       implementation: implementation,
       args: args,
-      lazy: true,  # Transients are always lazy
+      # Transients are always lazy
+      lazy: true,
       health_check: Keyword.get(opts, :health_check)
     }
-    
+
     GenServer.call(__MODULE__, {:register, config})
   end
 
@@ -111,7 +116,8 @@ defmodule Ratatoskr.Infrastructure.DI.Lifecycle do
     case GenServer.call(__MODULE__, {:get_singleton, key}) do
       {:ok, instance} -> instance
       {:error, reason} -> {:error, reason}
-      instance -> instance  # Direct return for compatibility
+      # Direct return for compatibility
+      instance -> instance
     end
   end
 
@@ -123,7 +129,8 @@ defmodule Ratatoskr.Infrastructure.DI.Lifecycle do
     case GenServer.call(__MODULE__, {:get_process_scoped, key, self()}) do
       {:ok, instance} -> instance
       {:error, reason} -> {:error, reason}
-      instance -> instance  # Direct return for compatibility
+      # Direct return for compatibility
+      instance -> instance
     end
   end
 
@@ -135,7 +142,8 @@ defmodule Ratatoskr.Infrastructure.DI.Lifecycle do
     case GenServer.call(__MODULE__, {:get_transient, key}) do
       {:ok, instance} -> instance
       {:error, reason} -> {:error, reason}
-      instance -> instance  # Direct return for compatibility
+      # Direct return for compatibility
+      instance -> instance
     end
   end
 
@@ -169,14 +177,14 @@ defmodule Ratatoskr.Infrastructure.DI.Lifecycle do
   def init(_opts) do
     # Monitor process exits to cleanup process-scoped dependencies
     Process.flag(:trap_exit, true)
-    
+
     state = %__MODULE__{
       singletons: %{},
       process_scoped: %{},
       configs: %{},
       health_checks: %{}
     }
-    
+
     Logger.info("DI Lifecycle manager started")
     {:ok, state}
   end
@@ -185,16 +193,16 @@ defmodule Ratatoskr.Infrastructure.DI.Lifecycle do
   def handle_call({:register, config}, _from, state) do
     new_configs = Map.put(state.configs, config.key, config)
     new_state = %{state | configs: new_configs}
-    
+
     Logger.debug("Registered dependency: #{config.key} (#{config.scope})")
-    
+
     # If not lazy, create singleton immediately
     if config.scope == :singleton and not config.lazy do
       case create_instance(config) do
         {:ok, instance} ->
           new_singletons = Map.put(state.singletons, config.key, instance)
           {:reply, :ok, %{new_state | singletons: new_singletons}}
-        
+
         {:error, reason} ->
           Logger.error("Failed to create eager singleton #{config.key}: #{inspect(reason)}")
           {:reply, {:error, reason}, new_state}
@@ -210,7 +218,7 @@ defmodule Ratatoskr.Infrastructure.DI.Lifecycle do
       nil ->
         # Create singleton if it doesn't exist
         create_singleton_instance(key, state)
-      
+
       instance ->
         # Check if cached instance is still alive (for pid instances)
         if is_pid(instance) and not Process.alive?(instance) do
@@ -228,17 +236,17 @@ defmodule Ratatoskr.Infrastructure.DI.Lifecycle do
     case Map.get(state.configs, key) do
       nil ->
         {:reply, {:error, :not_registered}, state}
-      
+
       config when config.scope != :singleton ->
         {:reply, {:error, :wrong_scope}, state}
-      
+
       config ->
         case create_instance(config) do
           {:ok, instance} ->
             new_singletons = Map.put(state.singletons, key, instance)
             new_state = %{state | singletons: new_singletons}
             {:reply, {:ok, instance}, new_state}
-          
+
           {:error, reason} ->
             {:reply, {:error, reason}, state}
         end
@@ -248,33 +256,33 @@ defmodule Ratatoskr.Infrastructure.DI.Lifecycle do
   @impl true
   def handle_call({:get_process_scoped, key, pid}, _from, state) do
     process_deps = Map.get(state.process_scoped, pid, %{})
-    
+
     case Map.get(process_deps, key) do
       nil ->
         case Map.get(state.configs, key) do
           nil ->
             {:reply, {:error, :not_registered}, state}
-          
+
           config when config.scope != :process_scoped ->
             {:reply, {:error, :wrong_scope}, state}
-          
+
           config ->
             case create_instance(config) do
               {:ok, instance} ->
                 # Monitor the process for cleanup
                 Process.monitor(pid)
-                
+
                 new_process_deps = Map.put(process_deps, key, instance)
                 new_process_scoped = Map.put(state.process_scoped, pid, new_process_deps)
                 new_state = %{state | process_scoped: new_process_scoped}
-                
+
                 {:reply, {:ok, instance}, new_state}
-              
+
               {:error, reason} ->
                 {:reply, {:error, reason}, state}
             end
         end
-      
+
       instance ->
         {:reply, {:ok, instance}, state}
     end
@@ -285,12 +293,12 @@ defmodule Ratatoskr.Infrastructure.DI.Lifecycle do
     case Map.get(state.configs, key) do
       nil ->
         {:reply, {:error, :not_registered}, state}
-      
+
       config ->
         case create_instance(config) do
           {:ok, instance} ->
             {:reply, {:ok, instance}, state}
-          
+
           {:error, reason} ->
             {:reply, {:error, reason}, state}
         end
@@ -299,14 +307,14 @@ defmodule Ratatoskr.Infrastructure.DI.Lifecycle do
 
   @impl true
   def handle_call(:health_check, _from, state) do
-    health_results = 
+    health_results =
       state.configs
       |> Enum.map(fn {key, config} ->
         result = perform_health_check(key, config, state)
         {key, result}
       end)
       |> Map.new()
-    
+
     new_state = %{state | health_checks: health_results}
     {:reply, health_results, new_state}
   end
@@ -317,7 +325,7 @@ defmodule Ratatoskr.Infrastructure.DI.Lifecycle do
     Enum.each(state.singletons, fn {key, instance} ->
       shutdown_instance(key, instance)
     end)
-    
+
     {:reply, :ok, state}
   end
 
@@ -325,7 +333,7 @@ defmodule Ratatoskr.Infrastructure.DI.Lifecycle do
   def handle_cast({:cleanup_process, pid}, state) do
     new_process_scoped = Map.delete(state.process_scoped, pid)
     new_state = %{state | process_scoped: new_process_scoped}
-    
+
     Logger.debug("Cleaned up process-scoped dependencies for #{inspect(pid)}")
     {:noreply, new_state}
   end
@@ -335,7 +343,7 @@ defmodule Ratatoskr.Infrastructure.DI.Lifecycle do
     # Automatically cleanup when monitored process dies
     new_process_scoped = Map.delete(state.process_scoped, pid)
     new_state = %{state | process_scoped: new_process_scoped}
-    
+
     {:noreply, new_state}
   end
 
@@ -395,14 +403,16 @@ defmodule Ratatoskr.Infrastructure.DI.Lifecycle do
     true
   end
 
-  defp perform_health_check(key, %{health_check: health_fun}, state) when is_function(health_fun) do
+  defp perform_health_check(key, %{health_check: health_fun}, state)
+       when is_function(health_fun) do
     try do
       # Get the instance to check
-      instance = case Map.get(state.singletons, key) do
-        nil -> nil
-        inst -> inst
-      end
-      
+      instance =
+        case Map.get(state.singletons, key) do
+          nil -> nil
+          inst -> inst
+        end
+
       health_fun.(instance)
     rescue
       _ -> false
@@ -412,6 +422,7 @@ defmodule Ratatoskr.Infrastructure.DI.Lifecycle do
   defp shutdown_instance(key, instance) when is_pid(instance) do
     if Process.alive?(instance) do
       Logger.debug("Shutting down singleton #{key}")
+
       try do
         # Use Process.exit for more reliable shutdown
         Process.exit(instance, :shutdown)

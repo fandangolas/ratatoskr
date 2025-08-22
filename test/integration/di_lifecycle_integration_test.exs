@@ -1,6 +1,6 @@
 defmodule Ratatoskr.Integration.DILifecycleIntegrationTest do
   use ExUnit.Case, async: false
-  
+
   alias Ratatoskr.Infrastructure.DI.{Container, Lifecycle}
   alias Ratatoskr.Infrastructure.Registry.ProcessRegistry
 
@@ -9,14 +9,15 @@ defmodule Ratatoskr.Integration.DILifecycleIntegrationTest do
   setup do
     # Ensure the application is started before each test
     {:ok, _} = Application.ensure_all_started(:ratatoskr)
-    
+
     # Start a fresh lifecycle manager and registry for each test
     if Process.whereis(Lifecycle) do
       GenServer.stop(Lifecycle)
     end
-    
+
     # Check the actual Registry process, not the ProcessRegistry module
     registry_pid = Process.whereis(Ratatoskr.Registry)
+
     if registry_pid do
       GenServer.stop(registry_pid)
     end
@@ -25,11 +26,12 @@ defmodule Ratatoskr.Integration.DILifecycleIntegrationTest do
       {:ok, _registry} -> :ok
       {:error, {:already_started, _pid}} -> :ok
     end
+
     case Lifecycle.start_link() do
       {:ok, _lifecycle} -> :ok
       {:error, {:already_started, _pid}} -> :ok
     end
-    
+
     on_exit(fn ->
       try do
         Container.shutdown()
@@ -40,19 +42,20 @@ defmodule Ratatoskr.Integration.DILifecycleIntegrationTest do
         :exit, _ -> :ok
       end
     end)
-    
+
     :ok
   end
 
   describe "integration with real infrastructure dependencies" do
     test "can register and use ProcessRegistry as singleton" do
       # Register ProcessRegistry as a singleton
-      assert :ok = Lifecycle.register_singleton(
-        :registry, 
-        ProcessRegistry, 
-        [],
-        health_check: &Process.alive?/1
-      )
+      assert :ok =
+               Lifecycle.register_singleton(
+                 :registry,
+                 ProcessRegistry,
+                 [],
+                 health_check: &Process.alive?/1
+               )
 
       # Get the singleton
       registry = Container.get_singleton(:registry)
@@ -76,7 +79,7 @@ defmodule Ratatoskr.Integration.DILifecycleIntegrationTest do
         def health_check(pid), do: GenServer.call(pid, :health_check)
 
         def init(state), do: {:ok, state}
-        
+
         def handle_cast({:record, event, data}, state) do
           events = [{event, data} | state.events]
           {:noreply, %{state | events: events}}
@@ -95,12 +98,13 @@ defmodule Ratatoskr.Integration.DILifecycleIntegrationTest do
         end
       end
 
-      assert :ok = Lifecycle.register_singleton(
-        :metrics,
-        TestMetrics,
-        [],
-        health_check: health_check
-      )
+      assert :ok =
+               Lifecycle.register_singleton(
+                 :metrics,
+                 TestMetrics,
+                 [],
+                 health_check: health_check
+               )
 
       # Get the singleton
       metrics = Container.get_singleton(:metrics)
@@ -110,7 +114,7 @@ defmodule Ratatoskr.Integration.DILifecycleIntegrationTest do
       TestMetrics.record_event(metrics, "test_event", %{value: 42})
       events = TestMetrics.get_events(metrics)
       assert events == [{"test_event", %{value: 42}}]
-      
+
       # Health check should pass
       health_results = Container.health_check()
       assert health_results[:metrics] == true
@@ -153,11 +157,12 @@ defmodule Ratatoskr.Integration.DILifecycleIntegrationTest do
       end
 
       # Register ETS manager as process-scoped
-      assert :ok = Lifecycle.register_process_scoped(
-        :ets_manager,
-        ETSManager,
-        [table_name: :process_table]
-      )
+      assert :ok =
+               Lifecycle.register_process_scoped(
+                 :ets_manager,
+                 ETSManager,
+                 table_name: :process_table
+               )
 
       # Get manager from current process
       manager1 = Container.get_process_scoped(:ets_manager)
@@ -168,24 +173,25 @@ defmodule Ratatoskr.Integration.DILifecycleIntegrationTest do
       assert {:ok, "value1"} = ETSManager.get(manager1, :key1)
 
       # Get manager from different process
-      task = Task.async(fn ->
-        manager2 = Container.get_process_scoped(:ets_manager)
-        
-        # Should be different manager
-        assert manager2 != manager1
-        
-        # Should not see data from other process
-        assert {:error, :not_found} = ETSManager.get(manager2, :key1)
-        
-        # Can store its own data
-        assert :ok = ETSManager.put(manager2, :key2, "value2")
-        assert {:ok, "value2"} = ETSManager.get(manager2, :key2)
-        
-        manager2
-      end)
+      task =
+        Task.async(fn ->
+          manager2 = Container.get_process_scoped(:ets_manager)
+
+          # Should be different manager
+          assert manager2 != manager1
+
+          # Should not see data from other process
+          assert {:error, :not_found} = ETSManager.get(manager2, :key1)
+
+          # Can store its own data
+          assert :ok = ETSManager.put(manager2, :key2, "value2")
+          assert {:ok, "value2"} = ETSManager.get(manager2, :key2)
+
+          manager2
+        end)
 
       _manager2 = Task.await(task)
-      
+
       # Original manager should not see data from task
       assert {:error, :not_found} = ETSManager.get(manager1, :key2)
       assert {:ok, "value1"} = ETSManager.get(manager1, :key1)
@@ -204,10 +210,11 @@ defmodule Ratatoskr.Integration.DILifecycleIntegrationTest do
         end
       end
 
-      assert :ok = Lifecycle.register_transient(
-        :connection,
-        {ConnectionFactory, :create_connection, ["localhost"]}
-      )
+      assert :ok =
+               Lifecycle.register_transient(
+                 :connection,
+                 {ConnectionFactory, :create_connection, ["localhost"]}
+               )
 
       # Create multiple connections
       conn1 = Container.get_transient(:connection)
@@ -230,7 +237,7 @@ defmodule Ratatoskr.Integration.DILifecycleIntegrationTest do
 
     test "dependencies work together in complex scenarios" do
       # Register multiple dependencies that work together
-      
+
       # Singleton event bus
       defmodule EventBus do
         use GenServer
@@ -257,6 +264,7 @@ defmodule Ratatoskr.Integration.DILifecycleIntegrationTest do
           Enum.each(state.subscribers, fn subscriber ->
             send(subscriber, {:event, event})
           end)
+
           {:noreply, state}
         end
       end
@@ -343,9 +351,10 @@ defmodule Ratatoskr.Integration.DILifecycleIntegrationTest do
       try do
         CrashyService.crash_me(crashy)
       catch
-        :exit, _ -> :ok  # Expected exit from GenServer.call
+        # Expected exit from GenServer.call
+        :exit, _ -> :ok
       end
-      
+
       # Give some time for the process to die
       Process.sleep(10)
 
@@ -363,12 +372,13 @@ defmodule Ratatoskr.Integration.DILifecycleIntegrationTest do
       # Register singleton with failing health check
       failing_health_check = fn _pid -> false end
 
-      assert :ok = Lifecycle.register_singleton(
-        :unhealthy,
-        ProcessRegistry,
-        [],
-        health_check: failing_health_check
-      )
+      assert :ok =
+               Lifecycle.register_singleton(
+                 :unhealthy,
+                 ProcessRegistry,
+                 [],
+                 health_check: failing_health_check
+               )
 
       # Create the singleton
       _unhealthy = Container.get_singleton(:unhealthy)
@@ -383,13 +393,14 @@ defmodule Ratatoskr.Integration.DILifecycleIntegrationTest do
     test "configure_lifecycle processes application configuration" do
       # Set up some configuration
       original_config = Application.get_env(:ratatoskr, :lifecycle, [])
-      
+
       test_config = [
         singletons: [
           {:test_registry, ProcessRegistry, []}
         ],
         process_scoped: [
-          {:test_cache, ProcessRegistry, []}  # Using ProcessRegistry as a dummy cache
+          # Using ProcessRegistry as a dummy cache
+          {:test_cache, ProcessRegistry, []}
         ]
       ]
 
@@ -406,7 +417,6 @@ defmodule Ratatoskr.Integration.DILifecycleIntegrationTest do
         # Test that process-scoped is registered
         cache = Container.get_process_scoped(:test_cache)
         assert is_pid(cache)
-
       after
         # Restore original config
         Application.put_env(:ratatoskr, :lifecycle, original_config)
