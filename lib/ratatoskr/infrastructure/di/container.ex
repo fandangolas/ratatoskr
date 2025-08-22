@@ -193,14 +193,14 @@ defmodule Ratatoskr.Infrastructure.DI.Container do
   end
 
   defp register_single_dependency({key, {module, function, base_args}, args}, register_func)
-       when is_atom(key) and is_atom(module) and is_atom(function) and 
-            is_list(base_args) and is_list(args) do
+       when is_atom(key) and is_atom(module) and is_atom(function) and
+              is_list(base_args) and is_list(args) do
     register_func.(key, {module, function, base_args}, args, [])
   end
 
   defp register_single_dependency({key, {module, function, base_args}, args, opts}, register_func)
-       when is_atom(key) and is_atom(module) and is_atom(function) and 
-            is_list(base_args) and is_list(args) and is_list(opts) do
+       when is_atom(key) and is_atom(module) and is_atom(function) and
+              is_list(base_args) and is_list(args) and is_list(opts) do
     register_func.(key, {module, function, base_args}, args, opts)
   end
 

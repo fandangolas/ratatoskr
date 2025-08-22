@@ -32,9 +32,9 @@ defmodule Ratatoskr do
       :ok = Ratatoskr.delete_topic("orders")
   """
 
+  alias Ratatoskr.Infrastructure.DI.Container
   alias Ratatoskr.Servers.BrokerServer
   alias Ratatoskr.UseCases.{PublishMessage, SubscribeToTopic}
-  alias Ratatoskr.Infrastructure.DI.Container
 
   @type topic_name :: String.t()
   @type message_id :: String.t()

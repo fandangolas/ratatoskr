@@ -10,8 +10,8 @@ defmodule Ratatoskr.Servers.BrokerServer do
   use GenServer
   require Logger
 
-  alias Ratatoskr.UseCases.ManageTopics
   alias Ratatoskr.Infrastructure.DI.Container
+  alias Ratatoskr.UseCases.ManageTopics
 
   # Public API
 

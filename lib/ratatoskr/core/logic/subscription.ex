@@ -172,7 +172,8 @@ defmodule Ratatoskr.Core.Logic.Subscription do
         raise ArgumentError, "Decoded value is not a reference"
       end
     rescue
-      e -> reraise ArgumentError, "Invalid reference format: #{Exception.message(e)}", __STACKTRACE__
+      e ->
+        reraise ArgumentError, "Invalid reference format: #{Exception.message(e)}", __STACKTRACE__
     end
   end
 

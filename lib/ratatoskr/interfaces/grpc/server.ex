@@ -14,25 +14,25 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
     CreateTopicResponse,
     DeleteTopicRequest,
     DeleteTopicResponse,
-    ListTopicsRequest,
-    ListTopicsResponse,
-    TopicExistsRequest,
-    TopicExistsResponse,
     GetStatsRequest,
     GetStatsResponse,
-    PublishRequest,
-    PublishResponse,
+    ListTopicsRequest,
+    ListTopicsResponse,
     PublishBatchRequest,
     PublishBatchResponse,
+    PublishRequest,
+    PublishResponse,
     SubscribeRequest,
+    TopicExistsRequest,
+    TopicExistsResponse,
     UnsubscribeRequest,
     UnsubscribeResponse
   }
 
-  alias Ratatoskr.UseCases.{PublishMessage, SubscribeToTopic, ManageTopics}
-  alias Ratatoskr.Interfaces.Grpc.Mappers
   alias Ratatoskr.Core.Logic.Subscription
   alias Ratatoskr.Infrastructure.DI.Container
+  alias Ratatoskr.Interfaces.Grpc.Mappers
+  alias Ratatoskr.UseCases.{ManageTopics, PublishMessage, SubscribeToTopic}
 
   @doc """
   Creates a new topic.

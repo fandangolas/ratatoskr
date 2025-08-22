@@ -181,7 +181,7 @@ defmodule Ratatoskr.UseCases.PublishMessageTest do
     test "validates complex message structures", %{deps: deps} do
       complex_payload = %{
         order: %{
-          id: 12345,
+          id: 12_345,
           items: [
             %{sku: "ABC123", quantity: 2, price: 19.99},
             %{sku: "DEF456", quantity: 1, price: 29.99}
