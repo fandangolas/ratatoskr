@@ -21,7 +21,7 @@ defmodule Ratatoskr.Servers.GrpcEndpoint do
     Logger.info("Starting gRPC endpoint on port #{port}")
 
     # For now, just skip gRPC server startup to avoid deprecation warnings
-    # TODO: Implement proper GRPC.Endpoint when needed
+    # FIXME: Implement proper GRPC.Endpoint when needed for production use
     Logger.info("gRPC endpoint initialized (server disabled for clean compilation)")
     {:ok, %{port: port}}
   end
