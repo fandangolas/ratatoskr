@@ -32,15 +32,7 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
   alias Ratatoskr.UseCases.{PublishMessage, SubscribeToTopic, ManageTopics}
   alias Ratatoskr.Interfaces.Grpc.Mappers
   alias Ratatoskr.Core.Logic.Subscription
-
-  # Dependency injection - will be configured at startup
-  @deps %{
-    registry: Ratatoskr.Infrastructure.Registry.ProcessRegistry,
-    # No persistence in MVP
-    storage: nil,
-    metrics: Ratatoskr.Infrastructure.Telemetry.MetricsCollector,
-    event_publisher: nil
-  }
+  alias Ratatoskr.Infrastructure.DI.Container
 
   @doc """
   Creates a new topic.
@@ -49,7 +41,7 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
   def create_topic(request, _stream) do
     Logger.debug("gRPC CreateTopic: #{request.name}")
 
-    case ManageTopics.create(request.name, [], @deps) do
+    case ManageTopics.create(request.name, [], Container.deps()) do
       {:ok, _topic_pid} ->
         %CreateTopicResponse{
           topic: request.name,
@@ -73,7 +65,7 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
   def delete_topic(request, _stream) do
     Logger.debug("gRPC DeleteTopic: #{request.name}")
 
-    case ManageTopics.delete(request.name, @deps) do
+    case ManageTopics.delete(request.name, Container.deps()) do
       :ok ->
         %DeleteTopicResponse{
           success: true,
@@ -95,7 +87,7 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
   def list_topics(_request, _stream) do
     Logger.debug("gRPC ListTopics")
 
-    case ManageTopics.list(@deps) do
+    case ManageTopics.list(Container.deps()) do
       {:ok, topics} ->
         %ListTopicsResponse{topics: topics}
 
@@ -111,7 +103,7 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
   def topic_exists(request, _stream) do
     Logger.debug("gRPC TopicExists: #{request.name}")
 
-    exists = ManageTopics.exists?(request.name, @deps)
+    exists = ManageTopics.exists?(request.name, Container.deps())
     %TopicExistsResponse{exists: exists}
   end
 
@@ -122,7 +114,7 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
   def get_stats(request, _stream) do
     Logger.debug("gRPC GetStats: #{request.topic}")
 
-    case ManageTopics.stats(request.topic, @deps) do
+    case ManageTopics.stats(request.topic, Container.deps()) do
       {:ok, stats} ->
         %GetStatsResponse{
           topic: stats.topic,
@@ -155,7 +147,7 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
       metadata: metadata
     ]
 
-    case PublishMessage.execute(request.topic, request.payload, opts, @deps) do
+    case PublishMessage.execute(request.topic, request.payload, opts, Container.deps()) do
       {:ok, message_id} ->
         %PublishResponse{
           message_id: message_id,
@@ -190,7 +182,7 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
           metadata: metadata
         ]
 
-        case PublishMessage.execute(topic, msg.payload, opts, @deps) do
+        case PublishMessage.execute(topic, msg.payload, opts, Container.deps()) do
           {:ok, message_id} ->
             %PublishResponse{
               message_id: message_id,
@@ -227,7 +219,7 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
     Logger.debug("gRPC Subscribe to: #{request.topic}, subscriber: #{request.subscriber_id}")
 
     # Check if topic exists first
-    unless ManageTopics.exists?(request.topic, @deps) do
+    unless ManageTopics.exists?(request.topic, Container.deps()) do
       GRPC.Server.send_reply(stream, {:error, "Topic does not exist: #{request.topic}"})
       :ok
     else
@@ -246,7 +238,7 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
     try do
       ref = Subscription.deserialize_reference(request.subscription_ref)
 
-      case SubscribeToTopic.unsubscribe(request.topic, ref, @deps) do
+      case SubscribeToTopic.unsubscribe(request.topic, ref, Container.deps()) do
         :ok ->
           %UnsubscribeResponse{
             success: true,
@@ -277,7 +269,7 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
       metadata: %{grpc_stream: true}
     ]
 
-    case SubscribeToTopic.execute(request.topic, self(), opts, @deps) do
+    case SubscribeToTopic.execute(request.topic, self(), opts, Container.deps()) do
       {:ok, subscription_ref} ->
         Logger.debug("gRPC subscription established: #{inspect(subscription_ref)}")
 
