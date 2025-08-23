@@ -122,23 +122,17 @@ Comprehensive test suite with multiple validation layers:
 # Run core tests
 mix test
 
-# Performance benchmarks
-mix test --include performance
-
-# Stress testing (100K+ concurrent)
-mix test --include stress
-
-# Recovery & resilience
-mix test --include recovery
-
 # Full test suite with coverage
 mix test --cover
 
-# Ultimate stress testing (configurable)
-elixir benchmark/configurable_stress_test.exs <total_messages> <topic_count> <total_subscribers>
+# Production performance benchmarks
+elixir benchmark/external_grpc_publisher.exs <total_messages> <topic_count>
 
-# Example: 1M messages, 1000 topics, 100K subscribers
-elixir benchmark/configurable_stress_test.exs 1000000 1000 100000
+# Broker resource monitoring
+elixir benchmark/broker_memory_monitor.exs <topic_count> <subscriber_count>
+
+# Example: 1M messages across 1000 topics
+elixir benchmark/external_grpc_publisher.exs 1000000 1000
 ```
 
 **Record Test Results:**

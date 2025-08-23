@@ -287,19 +287,19 @@ end
 - **Multiple topics:** ✅ Tested 5 topics with 20 subscribers each
 - **Crash recovery:** ✅ Graceful handling of process failures
 
-**Running Benchmarks:**
+**Running Production Benchmarks:**
 ```bash
-# Run performance tests
-mix test --include performance
+# Run core unit tests
+mix test
 
-# Run stress tests  
-mix test --include stress
+# Production gRPC performance benchmarks
+elixir benchmark/external_grpc_publisher.exs 100000 100
 
-# Run recovery tests
-mix test --include recovery
+# Broker resource monitoring
+elixir benchmark/broker_memory_monitor.exs 100 1000
 
-# Run all benchmarks
-mix test --include performance --include stress --include recovery
+# Extreme scale testing (1M messages, 1000 topics)
+elixir benchmark/external_grpc_publisher.exs 1000000 1000
 ```
 
 ## ⚠️ Important Constraints
@@ -397,25 +397,17 @@ Performance benchmarks are **excluded from CI** to maintain high-performance sta
 
 **Run Performance Tests Locally:**
 ```bash
-# Run all benchmark tests
-mix test --include benchmark --include performance
+# Run core unit and integration tests
+mix test
 
-# Run specific gRPC benchmarks  
-mix test test/grpc_benchmark_test.exs --include benchmark --include performance
+# Production gRPC benchmarks  
+elixir benchmark/external_grpc_publisher.exs 100000 100
 
-# Run custom P99 benchmarks (in /bin)
-elixir bin/benchmark_grpc_p99.exs
-elixir bin/benchmark_internal_p99.exs
+# Broker resource monitoring
+elixir benchmark/broker_memory_monitor.exs 100 1000
 
-# 🏆 ULTIMATE ENTERPRISE STRESS TESTING
-elixir bin/configurable_stress_test.exs <total_messages> <topic_count> <total_subscribers>
-
-# Examples:
-elixir bin/configurable_stress_test.exs 100000 100 10      # Small scale
-elixir bin/configurable_stress_test.exs 1000000 100 10     # Medium scale  
-elixir bin/configurable_stress_test.exs 1000000 1000 1000  # Large scale
-elixir bin/configurable_stress_test.exs 1000000 1000 10000 # Massive scale
-elixir bin/configurable_stress_test.exs 1000000 1000 100000 # ULTIMATE SCALE
+# Extreme scale testing (1M messages, 1000 topics)
+elixir benchmark/external_grpc_publisher.exs 1000000 1000
 ```
 
 **🏆 ENTERPRISE PERFORMANCE STANDARDS (Achieved):**
