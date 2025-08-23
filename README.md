@@ -57,43 +57,40 @@ stream, err := client.Subscribe(ctx, &pb.SubscribeRequest{
 - **Type-safe** communication via Protocol Buffers
 - **Streaming support** for real-time subscriptions
 - **Auto-generated clients** for multiple languages
-- **9,496 msg/s** gRPC throughput with 0.124ms P99 latency
-- **Ultra-lightweight** 20KB per subscriber memory footprint
+- **8,450 msg/s** real gRPC throughput with 0.158ms P99 latency
+- **Efficient** resource usage with ~2% CPU utilization
 - **Built-in** load balancing and connection management
 
 ## 📊 Performance
 
-**Measured on MacBook Air M4 (16GB RAM) - Real Performance Data:**
+**Measured on MacBook Air M4 (16GB RAM) - Honest Production Measurements:**
 
-### World-Class Performance (Verified)
+### Real-World Performance (Production-Ready)
 
-| Metric | Value | Test Conditions |
-|--------|-------|-----------------|
-| **Peak Throughput** | **203,625 msg/s** | 1M messages across 1,000 topics |
-| **Publishing P99 Latency** | **0.007ms** | Ultra-low latency confirmed |
-| **Delivery Throughput** | **1,960,243 deliveries/s** | Nearly 2M deliveries/second |
-| **Concurrent Subscribers** | **100,000** | Massive concurrency proven |
-| **Total Deliveries** | **100,000,000** | 100% success rate |
-| **Memory Efficiency** | **0.02MB/subscriber** | Exceptional scaling |
+| Metric | Internal API | gRPC API | Test Conditions |
+|--------|-------------|----------|-----------------|
+| **Throughput** | **74,771 msg/s** | **8,450 msg/s** | 1M messages, 1000 topics |
+| **P99 Latency** | **0.111ms** | **0.158ms** | Consistent tail latency |
+| **CPU Usage** | ~5% | ~2% | Efficient resource utilization |
+| **Memory/1M msgs** | 482MB | 42-89MB | Client-side overhead |
+| **Reliability** | 100% | 100% | Zero message loss |
 
-### Enterprise Scale Results
+### Production Scale Results
 
-| Configuration | Messages | Topics | Subscribers | Throughput | Deliveries | Memory |
-|---------------|----------|--------|-------------|------------|------------|--------|
-| **Small Scale** | 100K | 100 | 10 | 196,850 msg/s | 10K (100%) | 71MB |
-| **Medium Scale** | 1M | 100 | 10 | 198,531 msg/s | 100K (100%) | 482MB |
-| **Large Scale** | 1M | 1,000 | 1,000 | 184,843 msg/s | 1M (100%) | 712MB |
-| **Massive Scale** | 1M | 1,000 | 10,000 | 75,850 msg/s | 10M (100%) | 777MB |
-| **Ultimate Scale** | 1M | 1,000 | 100,000 | 10,908 msg/s | **100M (100%)** | 2GB |
+| Test Type | Messages | Topics | Duration | Throughput | P99 Latency | CPU |
+|-----------|----------|--------|----------|------------|-------------|-----|
+| **Quick Test** | 10K | 100 | 1.2s | 8,264 msg/s | 0.152ms | 1.91% |
+| **Standard** | 100K | 1 | 12s | 8,333 msg/s | 0.481ms | ~2% |
+| **Large Scale** | 1M | 1,000 | 118s | 8,450 msg/s | 0.158ms | ~2% |
 
-### Record-Breaking Achievements 🏆
+### Honest Achievements 🎯
 
-- **100,000,000 message deliveries** with 100% success rate
-- **100,000 concurrent subscribers** managed simultaneously
-- **203,625 msg/s peak throughput** sustained performance
-- **0.007ms P99 latency** ultra-low response times
-- **101,113 Erlang processes** coordinated flawlessly by OTP
-- **2GB memory efficiency** for 100M deliveries (20KB per subscriber)
+- **8,450 msg/s sustained gRPC throughput** over 2 minutes
+- **1,000 concurrent topics** handled without degradation
+- **Sub-millisecond P99 latency** (0.158ms) at scale
+- **2% CPU utilization** for high-throughput processing
+- **100% message delivery** reliability
+- **42MB memory overhead** for 1M gRPC messages
 
 ### Production Readiness
 
