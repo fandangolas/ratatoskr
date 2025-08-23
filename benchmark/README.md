@@ -20,12 +20,12 @@ The test suite uses a **separated architecture** to provide honest, production-r
 
 ```bash
 # Usage
-elixir bin/external_grpc_publisher.exs <total_messages> <topic_count>
+elixir benchmark/external_grpc_publisher.exs <total_messages> <topic_count>
 
 # Examples
-elixir bin/external_grpc_publisher.exs 10000 100      # Quick test
-elixir bin/external_grpc_publisher.exs 100000 1       # Standard test  
-elixir bin/external_grpc_publisher.exs 1000000 1000   # Extreme scale
+elixir benchmark/external_grpc_publisher.exs 10000 100      # Quick test
+elixir benchmark/external_grpc_publisher.exs 100000 1       # Standard test  
+elixir benchmark/external_grpc_publisher.exs 1000000 1000   # Extreme scale
 ```
 
 **Metrics Provided:**
@@ -39,12 +39,12 @@ elixir bin/external_grpc_publisher.exs 1000000 1000   # Extreme scale
 
 ```bash
 # Usage
-elixir bin/broker_memory_monitor.exs <topic_count> <subscriber_count>
+elixir benchmark/broker_memory_monitor.exs <topic_count> <subscriber_count>
 
 # Examples
-elixir bin/broker_memory_monitor.exs 10 100     # Small setup
-elixir bin/broker_memory_monitor.exs 100 1000   # Medium setup
-elixir bin/broker_memory_monitor.exs 1000 10000 # Large setup
+elixir benchmark/broker_memory_monitor.exs 10 100     # Small setup
+elixir benchmark/broker_memory_monitor.exs 100 1000   # Medium setup
+elixir benchmark/broker_memory_monitor.exs 1000 10000 # Large setup
 ```
 
 **Metrics Provided:**
@@ -58,7 +58,7 @@ elixir bin/broker_memory_monitor.exs 1000 10000 # Large setup
 ### Quick Performance Test (1 minute)
 ```bash
 # Test with 10K messages across 100 topics
-elixir bin/external_grpc_publisher.exs 10000 100
+elixir benchmark/external_grpc_publisher.exs 10000 100
 ```
 
 Expected Results:
@@ -69,7 +69,7 @@ Expected Results:
 ### Standard Load Test (2 minutes)
 ```bash
 # Test with 100K messages
-elixir bin/external_grpc_publisher.exs 100000 1
+elixir benchmark/external_grpc_publisher.exs 100000 1
 ```
 
 Expected Results:
@@ -80,7 +80,7 @@ Expected Results:
 ### Extreme Scale Test (2-3 minutes)
 ```bash
 # Test with 1M messages across 1000 topics
-elixir bin/external_grpc_publisher.exs 1000000 1000
+elixir benchmark/external_grpc_publisher.exs 1000000 1000
 ```
 
 Expected Results:
@@ -95,13 +95,13 @@ For the most accurate production simulation, run broker monitoring and client pu
 
 **Terminal 1 - Start Broker Monitor:**
 ```bash
-elixir bin/broker_memory_monitor.exs 100 1000
+elixir benchmark/broker_memory_monitor.exs 100 1000
 # Wait for "BROKER READY FOR PRODUCTION LOAD"
 ```
 
 **Terminal 2 - Run Publisher:**
 ```bash
-elixir bin/external_grpc_publisher.exs 100000 100
+elixir benchmark/external_grpc_publisher.exs 100000 100
 ```
 
 This separation ensures:

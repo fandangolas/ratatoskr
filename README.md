@@ -135,10 +135,10 @@ mix test --include recovery
 mix test --cover
 
 # Ultimate stress testing (configurable)
-elixir bin/configurable_stress_test.exs <total_messages> <topic_count> <total_subscribers>
+elixir benchmark/configurable_stress_test.exs <total_messages> <topic_count> <total_subscribers>
 
 # Example: 1M messages, 1000 topics, 100K subscribers
-elixir bin/configurable_stress_test.exs 1000000 1000 100000
+elixir benchmark/configurable_stress_test.exs 1000000 1000 100000
 ```
 
 **Record Test Results:**
