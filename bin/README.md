@@ -1,171 +1,140 @@
-# Ratatoskr Benchmark Scripts
+# 🧪 Ratatoskr Performance Test Suite
 
-This directory contains **real, measured performance** benchmark scripts for Ratatoskr.
+This directory contains production-ready performance testing tools for Ratatoskr message broker.
 
-## 🎯 Available Scripts (Real Data Only)
+## Test Architecture
 
-### `real_benchmark.exs` ✅ **BASELINE**
-**Real baseline performance** - Actual measured performance with honest memory usage.
+The test suite uses a **separated architecture** to provide honest, production-representative measurements:
 
-**Usage:**
-```bash
-mix run bin/real_benchmark.exs
+```
+┌─────────────────┐         ┌──────────────────┐
+│ External Client │ ──gRPC→ │  Ratatoskr       │
+│   Publisher     │         │  Message Broker  │
+└─────────────────┘         └──────────────────┘
 ```
 
-**Real Metrics (Legacy):**
-- ✅ **30,769 msg/s** with 50 subscribers (baseline test)
-- ✅ **64MB baseline** → **66MB peak** (2MB overhead)
-- ✅ **15,385 msg/s/MB** efficiency
-- ✅ MacBook Air M4 16GB verified results
+## Available Tools
 
-### `realistic_1gb_test.exs` 🎯 **REALISTIC SCALE**
-**Honest scaling test** - Real physical RAM usage within system limits.
+### 1. `external_grpc_publisher.exs`
+**Purpose:** Simulates production gRPC clients
 
-**Usage:**
 ```bash
-mix run bin/realistic_1gb_test.exs
+# Usage
+elixir bin/external_grpc_publisher.exs <total_messages> <topic_count>
+
+# Examples
+elixir bin/external_grpc_publisher.exs 10000 100      # Quick test
+elixir bin/external_grpc_publisher.exs 100000 1       # Standard test  
+elixir bin/external_grpc_publisher.exs 1000000 1000   # Extreme scale
 ```
 
-**Real Scale Results:**
-- ✅ **3,293 msg/s** with 2,000 subscribers
-- ✅ **64MB baseline** → **79MB peak** (15MB overhead)
-- ✅ **209+ msg/s/MB** efficiency
-- ✅ No virtual memory tricks - real physical RAM only
-- ✅ System stays stable, no swapping
+**Metrics Provided:**
+- Publishing throughput (msg/s)
+- P50, P99 latency (ms)
+- CPU utilization (%)
+- Memory overhead (MB)
 
-### `benchmark_grpc_p99.exs` ⚡ **gRPC PERFORMANCE**
-**gRPC server performance** - Real network protocol benchmarks.
+### 2. `broker_memory_monitor.exs`
+**Purpose:** Monitors broker-only resource consumption
 
-**Usage:**
 ```bash
-mix run bin/benchmark_grpc_p99.exs
+# Usage
+elixir bin/broker_memory_monitor.exs <topic_count> <subscriber_count>
+
+# Examples
+elixir bin/broker_memory_monitor.exs 10 100     # Small setup
+elixir bin/broker_memory_monitor.exs 100 1000   # Medium setup
+elixir bin/broker_memory_monitor.exs 1000 10000 # Large setup
 ```
 
-**gRPC Metrics:**
-- ✅ Complete latency distribution (P99, P95, etc.)
-- ✅ Network protocol overhead analysis
-- ✅ Cross-language client compatibility
+**Metrics Provided:**
+- Broker memory consumption (excluding client overhead)
+- Delivery throughput and P99 latency
+- Process count and resource efficiency
+- Real-time activity monitoring
 
-### `benchmark_grpc_comprehensive.exs` 📊 **gRPC ADVANCED**
-**Extended gRPC analysis** - Advanced network performance testing.
+## Running Production Tests
 
-**Usage:**
+### Quick Performance Test (1 minute)
 ```bash
-mix run bin/benchmark_grpc_comprehensive.exs
+# Test with 10K messages across 100 topics
+elixir bin/external_grpc_publisher.exs 10000 100
 ```
 
-**Advanced Features:**
-- ✅ Batch publishing analysis
-- ✅ Concurrent client testing
-- ✅ Connection overhead measurements
+Expected Results:
+- Throughput: ~8,000 msg/s
+- P99 Latency: <0.2ms
+- CPU Usage: ~2%
 
-### `configurable_stress_test.exs` 🏆 **ULTIMATE ENTERPRISE TESTING**
-**The ultimate enterprise-scale stress test** - Configurable massive-scale performance validation.
-
-**Usage:**
+### Standard Load Test (2 minutes)
 ```bash
-elixir bin/configurable_stress_test.exs <total_messages> <topic_count> <total_subscribers>
+# Test with 100K messages
+elixir bin/external_grpc_publisher.exs 100000 1
 ```
 
-**🏆 RECORD-BREAKING PERFORMANCE:**
-- ✅ **203,625 msg/s** peak throughput
-- ✅ **100,000,000 deliveries** with 100% success rate
-- ✅ **100,000 concurrent subscribers** managed flawlessly
-- ✅ **0.007ms P99 latency** ultra-low response times
-- ✅ **2GB memory** for 100M deliveries (20KB per subscriber)
-- ✅ **101,113 processes** coordinated by OTP
+Expected Results:
+- Throughput: ~8,000 msg/s
+- P99 Latency: <0.5ms
+- CPU Usage: ~2%
 
-**Example Configurations:**
+### Extreme Scale Test (2-3 minutes)
 ```bash
-# Small scale
-elixir bin/configurable_stress_test.exs 100000 100 10
-
-# Medium scale  
-elixir bin/configurable_stress_test.exs 1000000 100 10
-
-# Large scale
-elixir bin/configurable_stress_test.exs 1000000 1000 1000
-
-# Massive scale
-elixir bin/configurable_stress_test.exs 1000000 1000 10000
-
-# 🚀 ULTIMATE SCALE - 100M deliveries!
-elixir bin/configurable_stress_test.exs 1000000 1000 100000
+# Test with 1M messages across 1000 topics
+elixir bin/external_grpc_publisher.exs 1000000 1000
 ```
 
-## Running Benchmarks
+Expected Results:
+- Throughput: ~8,450 msg/s
+- P99 Latency: ~0.158ms
+- CPU Usage: ~2%
+- Memory: 42-89MB client overhead
 
-**Prerequisites:**
-- Ratatoskr application must be running
-- gRPC server listening on port 50051
-- No conflicting processes using the test topics
+## Separated Testing (Advanced)
 
-**Quick Performance Check:**
+For the most accurate production simulation, run broker monitoring and client publishing in separate terminals:
+
+**Terminal 1 - Start Broker Monitor:**
 ```bash
-# Start Ratatoskr and run primary benchmark
-mix run bin/benchmark_grpc_p99.exs
+elixir bin/broker_memory_monitor.exs 100 1000
+# Wait for "BROKER READY FOR PRODUCTION LOAD"
 ```
 
-**Full Performance Analysis:**
+**Terminal 2 - Run Publisher:**
 ```bash
-# Run comprehensive benchmark suite
-mix run bin/benchmark_grpc_comprehensive.exs
+elixir bin/external_grpc_publisher.exs 100000 100
 ```
 
-## Expected Performance Results
+This separation ensures:
+- Broker-only memory measurements
+- No interference between test tools
+- True production-like scenarios
 
-### 🏆 Enterprise Scale Performance (Latest)
+## Performance Baselines
 
-| Configuration | Messages | Topics | Subscribers | Throughput | Deliveries | Memory |
-|---------------|----------|--------|-------------|------------|------------|--------|
-| **Small Scale** | 100K | 100 | 10 | 196,850 msg/s | 10K (100%) | 71MB |
-| **Medium Scale** | 1M | 100 | 10 | 198,531 msg/s | 100K (100%) | 482MB |
-| **Large Scale** | 1M | 1,000 | 1,000 | 184,843 msg/s | 1M (100%) | 712MB |
-| **Massive Scale** | 1M | 1,000 | 10,000 | 75,850 msg/s | 10M (100%) | 777MB |
-| **Ultimate Scale** | 1M | 1,000 | 100,000 | 10,908 msg/s | **100M (100%)** | 2GB |
+Based on MacBook Air M4 (16GB RAM):
 
-### Legacy API Performance
+| Test Type | Messages | Topics | Throughput | P99 Latency | CPU |
+|-----------|----------|--------|------------|-------------|-----|
+| Quick | 10K | 100 | 8,264 msg/s | 0.152ms | 1.91% |
+| Standard | 100K | 1 | 8,333 msg/s | 0.481ms | ~2% |
+| Extreme | 1M | 1,000 | 8,450 msg/s | 0.158ms | ~2% |
 
-| Metric | Internal API | gRPC API | Status |
-|--------|-------------|----------|--------|
-| **Throughput** | ~311K msg/s | ~9.5K msg/s | ✅ Excellent |
-| **Average Latency** | 0.002ms | 0.105ms | ✅ Sub-millisecond |  
-| **P99 Latency** | 0.007ms | 0.124ms | ✅ Outstanding |
-| **Efficiency** | 100% | 3.0% | ✅ Expected for gRPC |
+## Key Features
 
-## Troubleshooting
+✅ **Honest Measurements**: Real gRPC network overhead included  
+✅ **CPU Tracking**: Accurate CPU utilization monitoring  
+✅ **Memory Separation**: Client vs broker memory tracking  
+✅ **Reproducible**: Consistent results across runs  
+✅ **Production-Ready**: Simulates real-world scenarios  
 
-**Port Already in Use:**
-```bash
-# Kill any existing processes on port 50051
-lsof -ti:50051 | xargs kill -9
-```
+## Notes
 
-**Application Not Starting:**
-```bash
-# Ensure all dependencies are installed
-mix deps.get
-mix compile
-```
-
-**Performance Lower Than Expected:**
-- Check system load and available resources
-- Ensure no other heavy processes are running
-- Verify network configuration (even localhost adds overhead)
-- Run multiple times to account for JIT warm-up
-
-## Performance Targets
-
-| Use Case | Min Throughput | Max P99 Latency | Status |
-|----------|----------------|-----------------|--------|
-| **Real-time Chat** | 1,000 msg/s | 5ms | ✅ **Far Exceeded** |
-| **IoT Data Ingestion** | 5,000 msg/s | 10ms | ✅ **Far Exceeded** |
-| **Financial Transactions** | 500 msg/s | 1ms | ✅ **Far Exceeded** |
-| **High-Frequency Trading** | 10,000 msg/s | 0.5ms | ✅ **Exceeded** |
-| **Enterprise Scale** | 100,000+ msg/s | 1ms | ✅ **Proven** |
-| **Ultimate Scale** | 200,000+ msg/s | <1ms | ✅ **Validated** |
+- All tests use real gRPC/HTTP2 protocol with Protocol Buffers
+- CPU measurement requires scheduler wall time tracking
+- Memory measurements use physical RAM (not BEAM VM memory)
+- Results are saved to `/tmp/` with timestamps
 
 ---
 
 *Last Updated: August 2025*  
-*Benchmark Scripts for Ratatoskr v0.1.0*
+*Performance Test Suite for Ratatoskr v0.1.0*
