@@ -14,8 +14,11 @@ defmodule Ratatoskr.Core.Logic.Topic do
   defstruct [
     :name,
     :created_at,
+    :partition_id,        # For partition-specific topics
+    :parent_topic,       # Reference to parent topic (if this is a partition)
     partitions: 1,
     max_subscribers: 1000,
+    retention_ms: 86_400_000,  # 24 hours default retention
     config: %{}
   ]
 
@@ -34,10 +37,21 @@ defmodule Ratatoskr.Core.Logic.Topic do
           _ -> []
         end
 
+      # Get default partition count from application config if partitioning enabled
+      default_partitions = 
+        if Application.get_env(:ratatoskr, :partitioning)[:enable_partitioning] do
+          Application.get_env(:ratatoskr, :partitioning)[:default_partition_count] || 4
+        else
+          1
+        end
+
       topic = %__MODULE__{
         name: name,
-        partitions: Keyword.get(config_opts, :partitions, 1),
+        partition_id: Keyword.get(config_opts, :partition_id),
+        parent_topic: Keyword.get(config_opts, :parent_topic),
+        partitions: Keyword.get(config_opts, :partitions, default_partitions),
         max_subscribers: Keyword.get(config_opts, :max_subscribers, 1000),
+        retention_ms: Keyword.get(config_opts, :retention_ms, 86_400_000),
         config: Map.merge(%{}, Map.new(config_opts)),
         created_at: DateTime.utc_now()
       }

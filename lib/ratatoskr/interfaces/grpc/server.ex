@@ -36,7 +36,7 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
   alias Ratatoskr.Infrastructure.DI.Container
   alias Ratatoskr.Infrastructure.Monitoring.MetricsEndpoint
   alias Ratatoskr.Interfaces.Grpc.Mappers
-  alias Ratatoskr.UseCases.{ManageTopics, SubscribeToTopic}
+  alias Ratatoskr.UseCases.{ManageTopics, PublishPartitionedMessage, SubscribeToTopic}
 
   @doc """
   Creates a new topic.
@@ -138,7 +138,7 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
   end
 
   @doc """
-  Publishes a single message to a topic using intelligent batching.
+  Publishes a single message to a topic using intelligent batching and partitioning.
   """
   @spec publish(PublishRequest.t(), GRPC.Server.Stream.t()) :: PublishResponse.t()
   def publish(request, _stream) do
@@ -146,15 +146,23 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
 
     # Convert gRPC request to domain format
     metadata = Mappers.grpc_metadata_to_map(request.metadata)
-
-    # Use batched publishing for better performance
-    message_id = UUID.uuid4()
     
-    case BatchedPublisher.publish_async(request.topic, request.payload, metadata) do
-      :ok ->
+    # Extract partition key from metadata if provided
+    partition_key = Map.get(metadata, "partition_key") || Map.get(metadata, :partition_key)
+    
+    opts = [
+      metadata: metadata,
+      partition_key: partition_key
+    ]
+
+    # Use partitioned publishing for optimal performance
+    case PublishPartitionedMessage.execute(request.topic, request.payload, opts, Container.deps()) do
+      {:ok, message_id, partition_id} ->
         # Increment real metrics
         MetricsEndpoint.increment_counter(:messages_published, 1)
         MetricsEndpoint.increment_counter(:grpc_publish_success, 1)
+        
+        Logger.debug("Message published to partition #{partition_id} for topic: #{request.topic}")
         
         %PublishResponse{
           message_id: message_id,
@@ -177,50 +185,66 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
   end
 
   @doc """
-  Publishes multiple messages to a topic in a batch using intelligent batching.
+  Publishes multiple messages to a topic in a batch using intelligent batching and partitioning.
   """
   @spec publish_batch(PublishBatchRequest.t(), GRPC.Server.Stream.t()) :: PublishBatchResponse.t()
   def publish_batch(request, _stream) do
     Logger.debug("gRPC PublishBatch to: #{request.topic}, count: #{length(request.messages)}")
 
-    # Convert gRPC messages to batch_message format with pre-generated IDs
+    # Convert gRPC messages to partitioned batch format
     batch_messages =
       Enum.map(request.messages, fn msg ->
         metadata = Mappers.grpc_metadata_to_map(msg.metadata)
         topic = if msg.topic != "", do: msg.topic, else: request.topic
-        message_id = UUID.uuid4()
+        
+        # Extract partition key from metadata
+        partition_key = Map.get(metadata, "partition_key") || Map.get(metadata, :partition_key)
 
         %{
           topic: topic,
           payload: msg.payload,
-          metadata: Map.put(metadata, :message_id, message_id)
+          metadata: metadata,
+          partition_key: partition_key
         }
       end)
 
-    # Use the high-performance batched publisher
-    case BatchedPublisher.publish_batch_async(batch_messages) do
-      :ok ->
-        # Generate response for all messages (they're queued for processing)
+    # Use the high-performance partitioned batch publisher
+    case PublishPartitionedMessage.execute_batch(batch_messages, Container.deps()) do
+      {:ok, batch_results} ->
+        # Convert batch results to gRPC format
         results =
-          Enum.map(batch_messages, fn msg ->
+          Enum.map(batch_results, fn result ->
             %PublishResponse{
-              message_id: msg.metadata.message_id,
+              message_id: result.message_id,
               timestamp: :os.system_time(:millisecond),
-              success: true,
-              error: ""
+              success: result.success,
+              error: result.error || ""
             }
           end)
 
-        success_count = length(results)
+        success_count = Enum.count(results, & &1.success)
+        error_count = length(results) - success_count
         
         # Increment real batch metrics
         MetricsEndpoint.increment_counter(:messages_published, success_count)
         MetricsEndpoint.increment_counter(:grpc_publish_batch_success, 1)
+        if error_count > 0 do
+          MetricsEndpoint.increment_counter(:grpc_publish_batch_error, 1)
+        end
+        
+        # Log partition distribution
+        partition_counts = 
+          batch_results
+          |> Enum.group_by(& &1.partition_id)
+          |> Enum.map(fn {partition_id, msgs} -> "P#{partition_id}:#{length(msgs)}" end)
+          |> Enum.join(", ")
+        
+        Logger.debug("Batch published across partitions: #{partition_counts}")
 
         %PublishBatchResponse{
           results: results,
           success_count: success_count,
-          error_count: 0
+          error_count: error_count
         }
 
       {:error, reason} ->
