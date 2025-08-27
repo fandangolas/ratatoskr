@@ -7,13 +7,29 @@ defmodule RatatoskrGrpcIntegrationTest do
   use ExUnit.Case, async: false
 
   alias Ratatoskr.Grpc.{PublishRequest, CreateTopicRequest, DeleteTopicRequest}
+  import ApplicationHelper
 
-  @grpc_port 9090
+  @grpc_port Application.compile_env(:ratatoskr, :grpc_port, 50053)
   @test_topic "grpc-integration-test"
 
   setup_all do
-    # Ensure the application is started with gRPC server
-    Application.ensure_all_started(:ratatoskr)
+    # Ensure the application is started with gRPC server using helper
+    case ensure_application_running() do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        raise "Failed to start application for gRPC integration tests: #{inspect(reason)}"
+    end
+
+    # Wait for application processes to be ready
+    case wait_for_application_processes() do
+      :ok ->
+        :ok
+
+      {:error, reason} ->
+        raise "Application processes not ready for gRPC integration tests: #{inspect(reason)}"
+    end
 
     # Wait for gRPC server to be ready
     wait_for_grpc_server()

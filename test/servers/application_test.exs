@@ -18,8 +18,14 @@ defmodule Ratatoskr.Servers.ApplicationTest do
       # Prepare for clean application lifecycle test
       prepare_for_application_lifecycle_test()
 
-      # Start application
-      {:ok, _pid} = Application.ensure_all_started(:ratatoskr)
+      # Start application with retry logic
+      case ensure_application_running() do
+        :ok ->
+          :ok
+
+        {:error, reason} ->
+          flunk("Failed to start application: #{inspect(reason)}")
+      end
 
       # Wait for application processes to be ready
       assert :ok = wait_for_application_processes()
@@ -58,8 +64,15 @@ defmodule Ratatoskr.Servers.ApplicationTest do
       Application.put_env(:ratatoskr, :lifecycle, test_config)
 
       try do
-        # Start application
-        {:ok, _pid} = Application.ensure_all_started(:ratatoskr)
+        # Start application with retry logic
+        case ensure_application_running() do
+          :ok ->
+            :ok
+
+          {:error, reason} ->
+            flunk("Failed to start application: #{inspect(reason)}")
+        end
+
         assert :ok = wait_for_application_processes()
 
         # Manually call configure_lifecycle since app was already started
@@ -78,8 +91,15 @@ defmodule Ratatoskr.Servers.ApplicationTest do
       # Prepare for application lifecycle test
       prepare_for_application_lifecycle_test()
 
-      # Start application
-      {:ok, _pid} = Application.ensure_all_started(:ratatoskr)
+      # Start application with retry logic
+      case ensure_application_running() do
+        :ok ->
+          :ok
+
+        {:error, reason} ->
+          flunk("Failed to start application: #{inspect(reason)}")
+      end
+
       assert :ok = wait_for_application_processes()
 
       # Register and create a singleton
@@ -107,19 +127,40 @@ defmodule Ratatoskr.Servers.ApplicationTest do
     end
 
     test "application can restart after shutdown" do
-      # Ensure clean start
-      if Application.get_application(:ratatoskr) do
-        Application.stop(:ratatoskr)
-      end
+      # Prepare for clean application lifecycle test
+      prepare_for_application_lifecycle_test()
 
       # Start application
-      {:ok, _pid} = Application.ensure_all_started(:ratatoskr)
+      case Application.ensure_all_started(:ratatoskr) do
+        {:ok, _pid} ->
+          :ok
+
+        {:error, {:already_started, _}} ->
+          :ok
+
+        {:error, reason} ->
+          flunk("Failed to start application: #{inspect(reason)}")
+      end
+
+      # Wait for processes to be ready
+      assert :ok = wait_for_application_processes()
 
       # Stop application
       :ok = Application.stop(:ratatoskr)
+      # Give extra time for clean shutdown
+      Process.sleep(100)
 
-      # Start again
-      {:ok, _pid} = Application.ensure_all_started(:ratatoskr)
+      # Start again with retry logic
+      case ensure_application_running() do
+        :ok ->
+          :ok
+
+        {:error, reason} ->
+          flunk("Failed to restart application: #{inspect(reason)}")
+      end
+
+      # Wait for processes after restart
+      assert :ok = wait_for_application_processes()
 
       # Should be able to use lifecycle features
       assert :ok =
@@ -145,7 +186,14 @@ defmodule Ratatoskr.Servers.ApplicationTest do
 
       try do
         # Should still start without crashing
-        {:ok, _pid} = Application.ensure_all_started(:ratatoskr)
+        case ensure_application_running() do
+          :ok ->
+            :ok
+
+          {:error, reason} ->
+            flunk("Failed to start application: #{inspect(reason)}")
+        end
+
         assert :ok = wait_for_application_processes()
 
         # Lifecycle manager should still work
@@ -166,9 +214,14 @@ defmodule Ratatoskr.Servers.ApplicationTest do
   describe "integration with other infrastructure components" do
     setup do
       # Ensure application and critical processes are available for these tests
-      assert :ok = ensure_application_running()
-      assert :ok = wait_for_application_processes()
-      :ok
+      case ensure_application_running() do
+        :ok ->
+          assert :ok = wait_for_application_processes()
+          :ok
+
+        {:error, reason} ->
+          flunk("Failed to start application in setup: #{inspect(reason)}")
+      end
     end
 
     test "lifecycle manager and registry work together" do

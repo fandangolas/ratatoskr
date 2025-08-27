@@ -100,7 +100,7 @@ defmodule Ratatoskr.UseCases.PublishMessageBatch do
     # Convert to Message structs, handling errors
     message_results =
       Enum.map(messages, fn msg ->
-        case Message.new(topic, msg.payload, msg.metadata) do
+        case Message.new(topic, msg.payload, metadata: msg.metadata) do
           {:ok, message} -> {:ok, message}
           {:error, reason} -> {:error, reason}
         end
@@ -115,31 +115,92 @@ defmodule Ratatoskr.UseCases.PublishMessageBatch do
         # All messages created successfully
         message_structs = Enum.map(successful_messages, fn {:ok, msg} -> msg end)
 
-        # Single GenServer call for the entire batch
-        case GenServer.call(topic_pid, {:publish_batch, message_structs}, 30_000) do
-      {:ok, message_ids} ->
-        # Zip message IDs with original messages
-        message_ids
-        |> Enum.zip(messages)
-        |> Enum.map(fn {message_id, original_msg} ->
-          %{
-            message_id: message_id,
-            topic: original_msg.topic,
-            success: true,
-            error: nil
-          }
-        end)
+        # Single GenServer call for the entire batch  
+        try do
+          case GenServer.call(topic_pid, {:publish_batch, message_structs}, 30_000) do
+            {:ok, message_ids} when is_list(message_ids) ->
+              # Check if it's a list of strings (regular topic) or result maps (partitioned topic)
+              case List.first(message_ids) do
+                id when is_binary(id) ->
+                  # Regular TopicServer response: list of message IDs
+                  message_ids
+                  |> Enum.zip(messages)
+                  |> Enum.map(fn {message_id, original_msg} ->
+                    %{
+                      message_id: message_id,
+                      topic: original_msg.topic,
+                      success: true,
+                      error: nil
+                    }
+                  end)
 
-        {:error, reason} ->
-          # Return error for all messages
-          Enum.map(messages, fn msg ->
-            %{
-              message_id: "",
-              topic: msg.topic,
-              success: false,
-              error: to_string(reason)
-            }
-          end)
+                %{message_id: _, success: _, error: _} ->
+                  # PartitionedTopic response: list of result maps
+                  Enum.map(message_ids, fn result ->
+                    %{
+                      message_id: result.message_id || "",
+                      topic: result[:topic] || result.original_message.topic,
+                      success: result.success,
+                      error: result.error
+                    }
+                  end)
+
+                _ ->
+                  # Unknown format
+                  Enum.map(messages, fn msg ->
+                    %{
+                      message_id: "",
+                      topic: msg.topic,
+                      success: false,
+                      error: "unknown_response_format"
+                    }
+                  end)
+              end
+
+            {:error, reason} ->
+              # Return error for all messages
+              Enum.map(messages, fn msg ->
+                %{
+                  message_id: "",
+                  topic: msg.topic,
+                  success: false,
+                  error: to_string(reason)
+                }
+              end)
+          end
+        catch
+          :exit, {:timeout, _} ->
+            # Timeout error
+            Enum.map(messages, fn msg ->
+              %{
+                message_id: "",
+                topic: msg.topic,
+                success: false,
+                error: "genserver_timeout"
+              }
+            end)
+
+          :exit, {:noproc, _} ->
+            # Process not available
+            Enum.map(messages, fn msg ->
+              %{
+                message_id: "",
+                topic: msg.topic,
+                success: false,
+                error: "topic_process_not_found"
+              }
+            end)
+
+          kind, reason ->
+            # Other errors
+            Enum.map(messages, fn msg ->
+              %{
+                message_id: "",
+                topic: msg.topic,
+                success: false,
+                error: "#{kind}:#{inspect(reason)}"
+              }
+            end)
         end
 
       {_successful_messages, _failed_messages} ->
@@ -165,17 +226,6 @@ defmodule Ratatoskr.UseCases.PublishMessageBatch do
           end
         end)
     end
-  rescue
-    # Handle timeout or other GenServer errors
-    _error ->
-      Enum.map(messages, fn msg ->
-        %{
-          message_id: "",
-          topic: msg.topic,
-          success: false,
-          error: "publish_timeout"
-        }
-      end)
   end
 
   @spec create_topic_and_publish(String.t(), [batch_message()], deps()) ::
@@ -195,9 +245,26 @@ defmodule Ratatoskr.UseCases.PublishMessageBatch do
   @spec find_topic_process(String.t(), module()) :: {:ok, pid()} | {:error, :not_found}
   defp find_topic_process(topic, registry) do
     # Use registry dependency directly for tests compatibility
-    case registry.lookup_topic(topic) do
-      {:ok, pid} -> {:ok, pid}
-      {:error, :not_found} -> {:error, :not_found}
+    try do
+      case registry.lookup_topic(topic) do
+        {:ok, pid} when is_pid(pid) ->
+          if Process.alive?(pid) do
+            {:ok, pid}
+          else
+            {:error, :topic_process_dead}
+          end
+
+        {:ok, not_pid} ->
+          {:error, {:invalid_pid, not_pid}}
+
+        {:error, :not_found} ->
+          {:error, :not_found}
+
+        other ->
+          {:error, {:unexpected_response, other}}
+      end
+    rescue
+      error -> {:error, {:registry_error, error}}
     end
   end
 end
