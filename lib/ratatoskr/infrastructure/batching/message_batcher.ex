@@ -1,15 +1,15 @@
 defmodule Ratatoskr.Infrastructure.Batching.MessageBatcher do
   @moduledoc """
   Kafka-inspired intelligent message batching for performance optimization.
-  
+
   Accumulates messages and flushes when:
   - Batch size reaches threshold
   - Timeout expires
   - Manual flush is requested
-  
+
   Provides significant throughput improvements by reducing per-message overhead.
   """
-  
+
   use GenServer
   require Logger
 
@@ -35,7 +35,7 @@ defmodule Ratatoskr.Infrastructure.Batching.MessageBatcher do
   def start_link(opts \\ []) do
     callback = Keyword.get(opts, :callback)
     if callback == nil, do: raise("callback function required")
-    
+
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
@@ -73,7 +73,7 @@ defmodule Ratatoskr.Infrastructure.Batching.MessageBatcher do
   def init(opts) do
     # Get batching configuration
     config = Application.get_env(:ratatoskr, :batching, [])
-    
+
     state = %State{
       batch_size: Keyword.get(config, :batch_size, @default_batch_size),
       batch_timeout: Keyword.get(config, :batch_timeout, @default_batch_timeout),
@@ -84,8 +84,10 @@ defmodule Ratatoskr.Infrastructure.Batching.MessageBatcher do
       timer_ref: nil
     }
 
-    Logger.info("MessageBatcher started: batch_size=#{state.batch_size}, timeout=#{state.batch_timeout}ms")
-    
+    Logger.info(
+      "MessageBatcher started: batch_size=#{state.batch_size}, timeout=#{state.batch_timeout}ms"
+    )
+
     {:ok, state}
   end
 
@@ -93,20 +95,17 @@ defmodule Ratatoskr.Infrastructure.Batching.MessageBatcher do
   def handle_cast({:add_message, message}, state) do
     new_messages = [message | state.messages]
     new_count = state.message_count + 1
-    
+
     # Start timeout timer if this is the first message
     timer_ref = maybe_start_timer(state.timer_ref, state.batch_timeout)
-    
+
     # Check if we should flush
     if new_count >= state.batch_size do
       flush_messages(new_messages, state.callback)
       {:noreply, reset_state(state)}
     else
-      {:noreply, %{state | 
-        messages: new_messages, 
-        message_count: new_count,
-        timer_ref: timer_ref
-      }}
+      {:noreply,
+       %{state | messages: new_messages, message_count: new_count, timer_ref: timer_ref}}
     end
   end
 
@@ -114,20 +113,17 @@ defmodule Ratatoskr.Infrastructure.Batching.MessageBatcher do
   def handle_cast({:add_messages, messages}, state) when is_list(messages) do
     new_messages = Enum.reverse(messages) ++ state.messages
     new_count = state.message_count + length(messages)
-    
+
     # Start timeout timer if needed
     timer_ref = maybe_start_timer(state.timer_ref, state.batch_timeout)
-    
+
     # Check if we should flush
     if new_count >= state.batch_size do
       flush_messages(new_messages, state.callback)
       {:noreply, reset_state(state)}
     else
-      {:noreply, %{state | 
-        messages: new_messages, 
-        message_count: new_count,
-        timer_ref: timer_ref
-      }}
+      {:noreply,
+       %{state | messages: new_messages, message_count: new_count, timer_ref: timer_ref}}
     end
   end
 
@@ -136,6 +132,7 @@ defmodule Ratatoskr.Infrastructure.Batching.MessageBatcher do
     if state.message_count > 0 do
       flush_messages(state.messages, state.callback)
     end
+
     {:reply, :ok, reset_state(state)}
   end
 
@@ -146,6 +143,7 @@ defmodule Ratatoskr.Infrastructure.Batching.MessageBatcher do
       batch_size: state.batch_size,
       batch_timeout: state.batch_timeout
     }
+
     {:reply, stats, state}
   end
 
@@ -164,6 +162,7 @@ defmodule Ratatoskr.Infrastructure.Batching.MessageBatcher do
   defp maybe_start_timer(nil, timeout_ms) do
     Process.send_after(self(), :flush_timeout, timeout_ms)
   end
+
   defp maybe_start_timer(existing_ref, _timeout_ms) do
     existing_ref
   end
@@ -171,7 +170,7 @@ defmodule Ratatoskr.Infrastructure.Batching.MessageBatcher do
   defp flush_messages(messages, callback) do
     # Reverse to get original order
     ordered_messages = Enum.reverse(messages)
-    
+
     # Call the callback with the batch
     try do
       callback.(ordered_messages)
@@ -187,11 +186,7 @@ defmodule Ratatoskr.Infrastructure.Batching.MessageBatcher do
     if state.timer_ref do
       Process.cancel_timer(state.timer_ref)
     end
-    
-    %{state | 
-      messages: [], 
-      message_count: 0,
-      timer_ref: nil
-    }
+
+    %{state | messages: [], message_count: 0, timer_ref: nil}
   end
 end

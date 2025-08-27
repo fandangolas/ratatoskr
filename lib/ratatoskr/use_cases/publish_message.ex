@@ -95,7 +95,8 @@ defmodule Ratatoskr.UseCases.PublishMessage do
     try do
       case GenServer.call(topic_pid, {:publish, message}) do
         {:ok, _} -> :ok
-        {:ok, _, _} -> :ok  # Handle partitioned topic response with {ok, message_id, partition_id}
+        # Handle partitioned topic response with {ok, message_id, partition_id}
+        {:ok, _, _} -> :ok
         {:error, reason} -> {:error, reason}
       end
     catch

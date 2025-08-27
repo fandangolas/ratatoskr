@@ -1,14 +1,13 @@
 defmodule Ratatoskr.Infrastructure.Cache.PageCache do
   @moduledoc """
   Page cache optimization for memory-efficient message storage.
-  
+
   Inspired by Kafka's page cache usage:
   - Uses ETS ordered_set for sequential access patterns
   - Leverages BEAM's memory management 
   - Reduces garbage collection pressure
   - Optimizes for batch operations
   """
-
 
   defstruct [:table_name, :max_size, :use_compression]
 
@@ -20,7 +19,7 @@ defmodule Ratatoskr.Infrastructure.Cache.PageCache do
     # Create ETS table optimized for sequential access
     :ets.new(table_name, [
       :ordered_set,
-      :public, 
+      :public,
       :named_table,
       {:write_concurrency, true},
       {:read_concurrency, true}
@@ -39,20 +38,20 @@ defmodule Ratatoskr.Infrastructure.Cache.PageCache do
   """
   def put_batch(cache, key_value_pairs) when is_list(key_value_pairs) do
     # Use ETS insert for batch operations (atomic and fast)
-    processed_pairs = 
+    processed_pairs =
       if cache.use_compression do
-        Enum.map(key_value_pairs, fn {k, v} -> 
-          {k, compress_message(v)} 
+        Enum.map(key_value_pairs, fn {k, v} ->
+          {k, compress_message(v)}
         end)
       else
         key_value_pairs
       end
 
     :ets.insert(cache.table_name, processed_pairs)
-    
+
     # Evict old entries if cache is too large
     maybe_evict_old_entries(cache)
-    
+
     :ok
   end
 
@@ -60,21 +59,24 @@ defmodule Ratatoskr.Infrastructure.Cache.PageCache do
   Get multiple values efficiently in batch.
   """
   def get_batch(cache, keys) when is_list(keys) do
-    results = Enum.map(keys, fn key ->
-      case :ets.lookup(cache.table_name, key) do
-        [{^key, value}] -> 
-          decompressed_value = 
-            if cache.use_compression do
-              decompress_message(value)
-            else
-              value
-            end
-          {key, decompressed_value}
-        [] -> 
-          {key, nil}
-      end
-    end)
-    
+    results =
+      Enum.map(keys, fn key ->
+        case :ets.lookup(cache.table_name, key) do
+          [{^key, value}] ->
+            decompressed_value =
+              if cache.use_compression do
+                decompress_message(value)
+              else
+                value
+              end
+
+            {key, decompressed_value}
+
+          [] ->
+            {key, nil}
+        end
+      end)
+
     results
   end
 
@@ -83,12 +85,13 @@ defmodule Ratatoskr.Infrastructure.Cache.PageCache do
   """
   def get_range(cache, start_key, end_key) do
     # Use ETS select for efficient range queries
-    match_spec = [{{:'$1', :'$2'}, 
-                   [{:andalso, {:>=, :'$1', start_key}, {:'=<', :'$1', end_key}}], 
-                   [{{:'$1', :'$2'}}]}]
-    
+    match_spec = [
+      {{:"$1", :"$2"}, [{:andalso, {:>=, :"$1", start_key}, {:"=<", :"$1", end_key}}],
+       [{{:"$1", :"$2"}}]}
+    ]
+
     results = :ets.select(cache.table_name, match_spec)
-    
+
     if cache.use_compression do
       Enum.map(results, fn {k, v} -> {k, decompress_message(v)} end)
     else
@@ -101,7 +104,7 @@ defmodule Ratatoskr.Infrastructure.Cache.PageCache do
   """
   def stats(cache) do
     info = :ets.info(cache.table_name)
-    
+
     %{
       size: info[:size],
       memory_bytes: info[:memory] * :erlang.system_info(:wordsize),
@@ -132,16 +135,17 @@ defmodule Ratatoskr.Infrastructure.Cache.PageCache do
 
   defp maybe_evict_old_entries(cache) do
     current_size = :ets.info(cache.table_name, :size)
-    
+
     if current_size > cache.max_size do
       # Remove oldest entries (lowest keys in ordered_set)
-      entries_to_remove = current_size - cache.max_size + 1000  # Remove extra for headroom
-      
+      # Remove extra for headroom
+      entries_to_remove = current_size - cache.max_size + 1000
+
       # Get oldest keys
-      oldest_keys = 
+      oldest_keys =
         :ets.first(cache.table_name)
         |> get_next_keys(cache.table_name, entries_to_remove - 1, [])
-        
+
       # Delete oldest entries
       Enum.each(oldest_keys, fn key ->
         :ets.delete(cache.table_name, key)
@@ -149,8 +153,9 @@ defmodule Ratatoskr.Infrastructure.Cache.PageCache do
     end
   end
 
-  defp get_next_keys(:'$end_of_table', _table, _remaining, acc), do: Enum.reverse(acc)
+  defp get_next_keys(:"$end_of_table", _table, _remaining, acc), do: Enum.reverse(acc)
   defp get_next_keys(_key, _table, 0, acc), do: Enum.reverse(acc)
+
   defp get_next_keys(key, table, remaining, acc) do
     next_key = :ets.next(table, key)
     get_next_keys(next_key, table, remaining - 1, [key | acc])
@@ -160,25 +165,26 @@ defmodule Ratatoskr.Infrastructure.Cache.PageCache do
 
   def get(cache, key) do
     case :ets.lookup(cache.table_name, key) do
-      [{^key, value}] -> 
+      [{^key, value}] ->
         if cache.use_compression do
           decompress_message(value)
         else
           value
         end
-      [] -> 
+
+      [] ->
         nil
     end
   end
 
   def put(cache, key, value) do
-    processed_value = 
+    processed_value =
       if cache.use_compression do
         compress_message(value)
       else
         value
       end
-    
+
     :ets.insert(cache.table_name, {key, processed_value})
     maybe_evict_old_entries(cache)
     :ok

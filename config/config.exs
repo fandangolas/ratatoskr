@@ -35,18 +35,18 @@ config :ratatoskr, :batching,
   # Lower values = lower latency, reduced throughput  
   # Recommended: 50-200 for high-throughput, 10-50 for low-latency
   batch_size: 100,
-  
+
   # Maximum time to wait before force flush (milliseconds)
   # Ensures low latency even under low message volumes
   # Recommended: 5-50ms depending on latency requirements
   batch_timeout: 10,
-  
+
   # Enable page cache optimization for memory efficiency
   # Uses ETS ordered_set with compression for sequential access patterns
   # Reduces garbage collection pressure and memory usage
   # Set to false only if memory is extremely constrained
   use_page_cache: true,
-  
+
   # Buffer size for batched operations (currently unused, reserved for future)
   # Will be used for advanced buffering strategies in next version
   buffer_size: 1000
@@ -79,22 +79,22 @@ config :ratatoskr, :partitioning,
   # Lower values = less overhead, potential bottlenecks
   # Recommended: 4-16 for most use cases, 32+ for high-throughput
   default_partition_count: 4,
-  
+
   # Enable partitioning by default for new topics
   # Set to false to use single-partition topics (backward compatibility)
   enable_partitioning: true,
-  
+
   # Partition assignment strategy
   # :hash - Consistent hashing based on partition key (default)
   # :round_robin - Round-robin assignment (ignores partition key)
   # :random - Random assignment (good for load balancing)
   partition_strategy: :hash,
-  
+
   # Number of virtual nodes per partition for consistent hashing
   # Higher values = better distribution, more memory usage
   # Recommended: 100-500 depending on partition count
   virtual_nodes_per_partition: 100,
-  
+
   # Maximum partitions per topic (safety limit)
   max_partitions_per_topic: 64
 

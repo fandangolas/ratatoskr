@@ -122,14 +122,15 @@ defmodule Ratatoskr.Servers.TopicServer do
 
     # Filter active subscribers once for the entire batch
     active_subscribers = filter_active_subscribers(state.subscribers)
-    
+
     # Process all messages in batch
-    {message_ids, new_messages_queue, total_delivered} = 
+    {message_ids, new_messages_queue, total_delivered} =
       process_message_batch(messages, state.messages, active_subscribers)
 
     # Update statistics for batch
     batch_count = length(messages)
-    last_timestamp = 
+
+    last_timestamp =
       messages
       |> List.last()
       |> Map.get(:timestamp, System.monotonic_time(:millisecond))
@@ -147,7 +148,10 @@ defmodule Ratatoskr.Servers.TopicServer do
         stats: new_stats
     }
 
-    Logger.debug("Batch delivered #{total_delivered} total message deliveries across #{batch_count} messages")
+    Logger.debug(
+      "Batch delivered #{total_delivered} total message deliveries across #{batch_count} messages"
+    )
+
     {:reply, {:ok, message_ids}, new_state}
   end
 
@@ -289,19 +293,20 @@ defmodule Ratatoskr.Servers.TopicServer do
       Enum.reduce(messages, {[], [], 0}, fn message, {ids_acc, msgs_acc, delivered_acc} ->
         # Deliver to subscribers for this message
         delivered_count = deliver_to_subscribers(message, active_subscribers)
-        
+
         # Collect results
         {
           [message.id | ids_acc],
-          [message | msgs_acc], 
+          [message | msgs_acc],
           delivered_acc + delivered_count
         }
       end)
 
     # Add all messages to queue efficiently
-    new_queue = 
+    new_queue =
       messages_for_queue
-      |> Enum.reverse()  # Maintain order since we built list in reverse
+      # Maintain order since we built list in reverse
+      |> Enum.reverse()
       |> Enum.reduce(current_queue, fn msg, queue_acc ->
         :queue.in(msg, queue_acc)
       end)

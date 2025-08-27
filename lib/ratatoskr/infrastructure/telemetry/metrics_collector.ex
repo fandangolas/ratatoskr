@@ -74,12 +74,13 @@ defmodule Ratatoskr.Infrastructure.Telemetry.MetricsCollector do
     )
 
     # Console handler for development
-    config_env = try do
-      Application.get_env(:ratatoskr, :config_env, :prod)
-    rescue
-      _ -> :prod
-    end
-    
+    config_env =
+      try do
+        Application.get_env(:ratatoskr, :config_env, :prod)
+      rescue
+        _ -> :prod
+      end
+
     if config_env == :dev do
       attach_handler(
         :ratatoskr_metrics_console,

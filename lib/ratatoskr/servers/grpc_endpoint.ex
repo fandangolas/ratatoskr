@@ -37,43 +37,57 @@ defmodule Ratatoskr.Servers.GrpcEndpoint do
   defp start_grpc_server(port) do
     # Get host from runtime configuration
     host = Application.get_env(:ratatoskr, :grpc_host, "0.0.0.0")
-    
+
     # Parse host to IP tuple format
-    ip = case host do
-      "0.0.0.0" -> {0, 0, 0, 0}
-      "127.0.0.1" -> {127, 0, 0, 1}
-      _ -> parse_ip_string(host)
-    end
-    
+    ip =
+      case host do
+        "0.0.0.0" -> {0, 0, 0, 0}
+        "127.0.0.1" -> {127, 0, 0, 1}
+        _ -> parse_ip_string(host)
+      end
+
     # Get configurable performance settings
     max_connections = Application.get_env(:ratatoskr, :grpc_max_connections, 32_768)
     num_acceptors = Application.get_env(:ratatoskr, :grpc_num_acceptors, 100)
     send_buffer = Application.get_env(:ratatoskr, :grpc_send_buffer_size, 65536)
     recv_buffer = Application.get_env(:ratatoskr, :grpc_recv_buffer_size, 65536)
-    
+
     # Optimized adapter options for high performance
     adapter_opts = [
       ip: ip,
       # Connection pool optimization
-      max_connections: max_connections,   # Configurable max connections
-      num_acceptors: num_acceptors,       # Configurable acceptors for concurrency
+      # Configurable max connections
+      max_connections: max_connections,
+      # Configurable acceptors for concurrency
+      num_acceptors: num_acceptors,
       # Socket-level optimizations  
       socket_opts: [
-        :binary,                        # Binary mode for efficiency
-        {:packet, :raw},                # Raw packet mode
-        {:active, false},               # Passive mode for backpressure
-        {:reuseaddr, true},             # Allow port reuse
-        {:nodelay, true},               # Disable Nagle's algorithm
-        {:send_timeout, 5000},          # 5s send timeout
-        {:send_timeout_close, true},    # Close on send timeout
-        {:keepalive, true},             # Enable TCP keepalive
+        # Binary mode for efficiency
+        :binary,
+        # Raw packet mode
+        {:packet, :raw},
+        # Passive mode for backpressure
+        {:active, false},
+        # Allow port reuse
+        {:reuseaddr, true},
+        # Disable Nagle's algorithm
+        {:nodelay, true},
+        # 5s send timeout
+        {:send_timeout, 5000},
+        # Close on send timeout
+        {:send_timeout_close, true},
+        # Enable TCP keepalive
+        {:keepalive, true},
         # Configurable buffer optimizations
-        {:sndbuf, send_buffer},         # Configurable send buffer
-        {:recbuf, recv_buffer},         # Configurable receive buffer
-        {:buffer, recv_buffer}          # Configurable driver buffer
+        # Configurable send buffer
+        {:sndbuf, send_buffer},
+        # Configurable receive buffer
+        {:recbuf, recv_buffer},
+        # Configurable driver buffer
+        {:buffer, recv_buffer}
       ]
     ]
-    
+
     # Start the gRPC server supervisor with optimized configuration
     GRPC.Server.Supervisor.start_link(
       port: port,
@@ -82,11 +96,12 @@ defmodule Ratatoskr.Servers.GrpcEndpoint do
       servers: [Ratatoskr.Interfaces.Grpc.Server]
     )
   end
-  
+
   defp parse_ip_string(host) do
     case :inet.parse_address(to_charlist(host)) do
       {:ok, ip_tuple} -> ip_tuple
-      _ -> {0, 0, 0, 0}  # Default fallback
+      # Default fallback
+      _ -> {0, 0, 0, 0}
     end
   end
 

@@ -8,7 +8,7 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
 
   use GRPC.Server, service: Ratatoskr.Grpc.MessageBroker.Service
   require Logger
-  
+
   alias UUID
 
   alias Ratatoskr.Grpc.{
@@ -145,10 +145,10 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
 
     # Convert gRPC request to domain format
     metadata = Mappers.grpc_metadata_to_map(request.metadata)
-    
+
     # Extract partition key from metadata if provided
     partition_key = Map.get(metadata, "partition_key") || Map.get(metadata, :partition_key)
-    
+
     opts = [
       metadata: metadata,
       partition_key: partition_key
@@ -160,9 +160,9 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
         # Increment real metrics
         MetricsEndpoint.increment_counter(:messages_published, 1)
         MetricsEndpoint.increment_counter(:grpc_publish_success, 1)
-        
+
         Logger.debug("Message published to partition #{partition_id} for topic: #{request.topic}")
-        
+
         %PublishResponse{
           message_id: message_id,
           timestamp: :os.system_time(:millisecond),
@@ -173,7 +173,7 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
       {:error, reason} ->
         # Increment error metrics
         MetricsEndpoint.increment_counter(:grpc_publish_error, 1)
-        
+
         %PublishResponse{
           message_id: "",
           timestamp: :os.system_time(:millisecond),
@@ -195,7 +195,7 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
       Enum.map(request.messages, fn msg ->
         metadata = Mappers.grpc_metadata_to_map(msg.metadata)
         topic = if msg.topic != "", do: msg.topic, else: request.topic
-        
+
         # Extract partition key from metadata
         partition_key = Map.get(metadata, "partition_key") || Map.get(metadata, :partition_key)
 
@@ -223,21 +223,22 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
 
         success_count = Enum.count(results, & &1.success)
         error_count = length(results) - success_count
-        
+
         # Increment real batch metrics
         MetricsEndpoint.increment_counter(:messages_published, success_count)
         MetricsEndpoint.increment_counter(:grpc_publish_batch_success, 1)
+
         if error_count > 0 do
           MetricsEndpoint.increment_counter(:grpc_publish_batch_error, 1)
         end
-        
+
         # Log partition distribution
-        partition_counts = 
+        partition_counts =
           batch_results
           |> Enum.group_by(& &1.partition_id)
           |> Enum.map(fn {partition_id, msgs} -> "P#{partition_id}:#{length(msgs)}" end)
           |> Enum.join(", ")
-        
+
         Logger.debug("Batch published across partitions: #{partition_counts}")
 
         %PublishBatchResponse{
@@ -249,7 +250,7 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
       {:error, reason} ->
         # Increment batch error metrics
         MetricsEndpoint.increment_counter(:grpc_publish_batch_error, 1)
-        
+
         # Return error for all messages
         results =
           Enum.map(request.messages, fn _msg ->
@@ -330,7 +331,7 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
     case SubscribeToTopic.execute(request.topic, self(), opts, Container.deps()) do
       {:ok, subscription_ref} ->
         Logger.debug("gRPC subscription established: #{inspect(subscription_ref)}")
-        
+
         # Increment successful subscribe metrics
         MetricsEndpoint.increment_counter(:grpc_subscribe_success, 1)
 
@@ -342,10 +343,10 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
 
       {:error, reason} ->
         Logger.error("gRPC subscription failed: #{reason}")
-        
+
         # Increment subscribe error metrics
         MetricsEndpoint.increment_counter(:grpc_subscribe_error, 1)
-        
+
         GRPC.Server.send_reply(stream, {:error, to_string(reason)})
     end
   end
@@ -358,7 +359,7 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
 
         # Send to gRPC stream
         GRPC.Server.send_reply(stream, grpc_message)
-        
+
         # Increment message consumed counter
         MetricsEndpoint.increment_counter(:messages_consumed, 1)
 

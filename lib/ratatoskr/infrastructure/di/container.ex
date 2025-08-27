@@ -234,6 +234,7 @@ defmodule Ratatoskr.Infrastructure.DI.Container do
 
   defp registry do
     env = get_env()
+
     case env do
       :test -> test_registry()
       _ -> Application.get_env(:ratatoskr, :registry, default_registry())
@@ -242,6 +243,7 @@ defmodule Ratatoskr.Infrastructure.DI.Container do
 
   defp storage do
     env = get_env()
+
     case env do
       :test -> test_storage()
       _ -> Application.get_env(:ratatoskr, :storage, default_storage())
@@ -250,6 +252,7 @@ defmodule Ratatoskr.Infrastructure.DI.Container do
 
   defp metrics do
     env = get_env()
+
     case env do
       :test -> test_metrics()
       _ -> Application.get_env(:ratatoskr, :metrics, default_metrics())
@@ -258,6 +261,7 @@ defmodule Ratatoskr.Infrastructure.DI.Container do
 
   defp event_publisher do
     env = get_env()
+
     case env do
       :test -> test_event_publisher()
       _ -> Application.get_env(:ratatoskr, :event_publisher, default_event_publisher())

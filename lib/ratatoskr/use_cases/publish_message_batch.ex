@@ -48,7 +48,7 @@ defmodule Ratatoskr.UseCases.PublishMessageBatch do
     grouped_messages = Enum.group_by(messages, & &1.topic)
 
     # Process each topic's messages in parallel
-    tasks = 
+    tasks =
       for {topic, topic_messages} <- grouped_messages do
         Task.async(fn ->
           publish_to_topic_batch(topic, topic_messages, deps)
@@ -56,9 +56,10 @@ defmodule Ratatoskr.UseCases.PublishMessageBatch do
       end
 
     # Wait for all tasks and flatten results
-    results = 
+    results =
       tasks
-      |> Task.await_many(30_000)  # 30 second timeout
+      # 30 second timeout
+      |> Task.await_many(30_000)
       |> List.flatten()
 
     {:ok, results}
@@ -77,8 +78,10 @@ defmodule Ratatoskr.UseCases.PublishMessageBatch do
       {:error, :not_found} ->
         # Create topic and then publish
         case create_topic_and_publish(topic, messages, deps) do
-          {:ok, results} -> results
-          {:error, _reason} -> 
+          {:ok, results} ->
+            results
+
+          {:error, _reason} ->
             # Return error results for all messages in this topic
             Enum.map(messages, fn msg ->
               %{
@@ -95,7 +98,7 @@ defmodule Ratatoskr.UseCases.PublishMessageBatch do
   @spec publish_batch_to_topic(pid(), String.t(), [batch_message()], deps()) :: [batch_result()]
   defp publish_batch_to_topic(topic_pid, topic, messages, _deps) do
     # Convert to Message structs
-    message_structs = 
+    message_structs =
       Enum.map(messages, fn msg ->
         Message.new(topic, msg.payload, msg.metadata)
       end)
@@ -139,7 +142,7 @@ defmodule Ratatoskr.UseCases.PublishMessageBatch do
       end)
   end
 
-  @spec create_topic_and_publish(String.t(), [batch_message()], deps()) :: 
+  @spec create_topic_and_publish(String.t(), [batch_message()], deps()) ::
           {:ok, [batch_result()]} | {:error, any()}
   defp create_topic_and_publish(topic, messages, deps) do
     # Use existing topic creation logic

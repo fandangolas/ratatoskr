@@ -40,17 +40,20 @@ defmodule Ratatoskr.UseCases.ManageTopics do
   @spec delete(String.t(), deps()) :: :ok | {:error, reason :: atom()}
   def delete(topic_name, %{registry: registry} = _deps) do
     # Check if this is a partitioned topic
-    partitioning_enabled = Application.get_env(:ratatoskr, :partitioning)[:enable_partitioning] || false
-    
+    partitioning_enabled =
+      Application.get_env(:ratatoskr, :partitioning)[:enable_partitioning] || false
+
     if partitioning_enabled do
       # Try to find and stop partitioned topic first
-      case GenServer.whereis({:via, Registry, {Ratatoskr.Registry, {:partitioned_topic, topic_name}}}) do
+      case GenServer.whereis(
+             {:via, Registry, {Ratatoskr.Registry, {:partitioned_topic, topic_name}}}
+           ) do
         pid when is_pid(pid) ->
           GenServer.stop(pid, :normal, 5000)
           registry.unregister_topic(topic_name)
           Ratatoskr.Infrastructure.Cache.TopicCache.invalidate(topic_name)
           :ok
-          
+
         nil ->
           # Fall back to regular topic deletion
           delete_regular_topic(topic_name, registry)
@@ -97,26 +100,35 @@ defmodule Ratatoskr.UseCases.ManageTopics do
 
   defp create_partitioned_topic(topic_name, opts, deps, allow_existing) do
     partition_count = Keyword.get(opts, :partition_count, 4)
-    
-    case PartitionedTopic.start_link([topic_name: topic_name, partition_count: partition_count]) do
+
+    case PartitionedTopic.start_link(topic_name: topic_name, partition_count: partition_count) do
       {:ok, partitioned_topic_pid} ->
         # Register the partitioned topic
         case deps.registry.register_topic(topic_name, partitioned_topic_pid) do
           :ok ->
-            Ratatoskr.Infrastructure.Cache.TopicCache.put_topic_pid(topic_name, partitioned_topic_pid)
+            Ratatoskr.Infrastructure.Cache.TopicCache.put_topic_pid(
+              topic_name,
+              partitioned_topic_pid
+            )
+
             {:ok, partitioned_topic_pid}
-          
+
           {:error, :already_registered} ->
             if allow_existing do
-              Ratatoskr.Infrastructure.Cache.TopicCache.put_topic_pid(topic_name, partitioned_topic_pid)
+              Ratatoskr.Infrastructure.Cache.TopicCache.put_topic_pid(
+                topic_name,
+                partitioned_topic_pid
+              )
+
               {:ok, partitioned_topic_pid}
             else
               {:error, :already_exists}
             end
-          
-          error -> error
+
+          error ->
+            error
         end
-        
+
       {:error, {:already_started, pid}} ->
         if allow_existing do
           Ratatoskr.Infrastructure.Cache.TopicCache.put_topic_pid(topic_name, pid)
@@ -124,8 +136,9 @@ defmodule Ratatoskr.UseCases.ManageTopics do
         else
           {:error, :already_exists}
         end
-        
-      error -> error
+
+      error ->
+        error
     end
   end
 

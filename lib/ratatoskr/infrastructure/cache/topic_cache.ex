@@ -1,7 +1,7 @@
 defmodule Ratatoskr.Infrastructure.Cache.TopicCache do
   @moduledoc """
   ETS-based caching for topic PID lookups to optimize performance.
-  
+
   Reduces Registry lookup overhead by maintaining an in-memory cache
   of topic names to PID mappings with TTL and invalidation support.
   """
@@ -10,8 +10,10 @@ defmodule Ratatoskr.Infrastructure.Cache.TopicCache do
   require Logger
 
   @table_name :ratatoskr_topic_cache
-  @default_ttl_ms 30_000  # 30 seconds TTL
-  @cleanup_interval_ms 60_000  # Clean up every minute
+  # 30 seconds TTL
+  @default_ttl_ms 30_000
+  # Clean up every minute
+  @cleanup_interval_ms 60_000
 
   # Public API
 
@@ -74,7 +76,7 @@ defmodule Ratatoskr.Infrastructure.Cache.TopicCache do
   @spec stats() :: %{entries: non_neg_integer(), memory_words: non_neg_integer()}
   def stats do
     info = :ets.info(@table_name)
-    
+
     %{
       entries: info[:size] || 0,
       memory_words: info[:memory] || 0
@@ -86,15 +88,21 @@ defmodule Ratatoskr.Infrastructure.Cache.TopicCache do
   @impl true
   def init(_opts) do
     Logger.info("Starting topic cache with TTL: #{@default_ttl_ms}ms")
-    
+
     # Create ETS table
-    table = :ets.new(@table_name, [
-      :set,                    # Set-based table (unique keys)
-      :named_table,           # Access by name
-      :public,                # Public access
-      {:write_concurrency, true},  # Concurrent writes
-      {:read_concurrency, true}    # Concurrent reads
-    ])
+    table =
+      :ets.new(@table_name, [
+        # Set-based table (unique keys)
+        :set,
+        # Access by name
+        :named_table,
+        # Public access
+        :public,
+        # Concurrent writes
+        {:write_concurrency, true},
+        # Concurrent reads
+        {:read_concurrency, true}
+      ])
 
     # Schedule periodic cleanup
     schedule_cleanup()
@@ -121,7 +129,7 @@ defmodule Ratatoskr.Infrastructure.Cache.TopicCache do
     case :ets.lookup(@table_name, topic_name) do
       [{^topic_name, pid, expiry_time}] ->
         current_time = System.monotonic_time(:millisecond)
-        
+
         if current_time < expiry_time do
           {:ok, pid}
         else
@@ -153,11 +161,12 @@ defmodule Ratatoskr.Infrastructure.Cache.TopicCache do
 
   defp cleanup_expired_entries do
     current_time = System.monotonic_time(:millisecond)
-    
+
     # Find and delete expired entries
-    expired_count = :ets.select_delete(@table_name, [
-      {{:_, :_, :"$1"}, [{:<, :"$1", current_time}], [true]}
-    ])
+    expired_count =
+      :ets.select_delete(@table_name, [
+        {{:_, :_, :"$1"}, [{:<, :"$1", current_time}], [true]}
+      ])
 
     if expired_count > 0 do
       Logger.debug("Cleaned up #{expired_count} expired topic cache entries")

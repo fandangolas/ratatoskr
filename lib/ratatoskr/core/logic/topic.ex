@@ -14,11 +14,14 @@ defmodule Ratatoskr.Core.Logic.Topic do
   defstruct [
     :name,
     :created_at,
-    :partition_id,        # For partition-specific topics
-    :parent_topic,       # Reference to parent topic (if this is a partition)
+    # For partition-specific topics
+    :partition_id,
+    # Reference to parent topic (if this is a partition)
+    :parent_topic,
     partitions: 1,
     max_subscribers: 1000,
-    retention_ms: 86_400_000,  # 24 hours default retention
+    # 24 hours default retention
+    retention_ms: 86_400_000,
     config: %{}
   ]
 
@@ -38,7 +41,7 @@ defmodule Ratatoskr.Core.Logic.Topic do
         end
 
       # Get default partition count from application config if partitioning enabled
-      default_partitions = 
+      default_partitions =
         if Application.get_env(:ratatoskr, :partitioning)[:enable_partitioning] do
           Application.get_env(:ratatoskr, :partitioning)[:default_partition_count] || 4
         else

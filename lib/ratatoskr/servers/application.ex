@@ -16,7 +16,6 @@ defmodule Ratatoskr.Servers.Application do
   alias Ratatoskr.Servers.GrpcEndpoint
   alias Ratatoskr.Servers.Supervisor
 
-
   @impl true
   def start(_type, _args) do
     children = [
@@ -33,10 +32,10 @@ defmodule Ratatoskr.Servers.Application do
 
       # Interface layer
       {GrpcEndpoint, []},
-      
+
       # Lightweight monitoring (no hot-path overhead)
       {Ratatoskr.Infrastructure.Monitoring.MetricsEndpoint, []},
-      
+
       # High-performance batching system
       {Ratatoskr.Infrastructure.Batching.BatchedPublisher, []}
     ]
