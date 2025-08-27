@@ -4,16 +4,16 @@ defmodule Ratatoskr.Application do
   use Application
   require Logger
 
+  alias Ratatoskr.Servers.Application
+
   @impl true
   def start(type, args) do
     Logger.info("Starting Ratatoskr message broker...")
-
-    # Delegate to the clean architecture application server
-    Ratatoskr.Servers.Application.start(type, args)
+    Application.start(type, args)
   end
 
   @impl true
   def stop(state) do
-    Ratatoskr.Servers.Application.stop(state)
+    Application.stop(state)
   end
 end

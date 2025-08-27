@@ -115,11 +115,15 @@ IO.puts("")
 # Create connection pool
 IO.puts("🔗 Creating connection pool with #{concurrency_level} channels...")
 
+# Get gRPC configuration from environment or use defaults
+grpc_host = System.get_env("RATATOSKR_GRPC_HOST", "localhost")
+grpc_port = System.get_env("RATATOSKR_GRPC_PORT", "50051") |> String.to_integer()
+
 connection_pool = try do
-  ConnectionPool.create_pool("localhost", 9090, concurrency_level)
+  ConnectionPool.create_pool(grpc_host, grpc_port, concurrency_level)
 rescue
   error ->
-    IO.puts("❌ Failed to connect to gRPC server on localhost:9090")
+    IO.puts("❌ Failed to connect to gRPC server on #{grpc_host}:#{grpc_port}")
     IO.puts("Make sure the broker is running: elixir benchmark/broker_memory_monitor.exs")
     IO.puts("Error: #{inspect(error)}")
     exit({:shutdown, 1})

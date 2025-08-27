@@ -1,0 +1,15 @@
+# Development override file
+# This file is automatically loaded by docker-compose and overrides settings in docker-compose.yml
+# Use this for local development settings
+
+services:
+  ratatoskr:
+    # For development, enable interactive mode and volume mounting
+    stdin_open: true
+    tty: true
+    # volumes:
+    #   # Mount source code for hot reloading (uncomment if needed)
+    #   - ./lib:/app/lib:ro
+    #   - ./config:/app/config:ro
+    environment:
+      - RATATOSKR_LOG_LEVEL=debug

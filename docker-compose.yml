@@ -1,0 +1,53 @@
+services:
+  ratatoskr:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ratatoskr-broker
+    ports:
+      - "50051:50051"  # gRPC port
+    environment:
+      - RATATOSKR_GRPC_PORT=50051
+      - RATATOSKR_GRPC_HOST=0.0.0.0
+    networks:
+      - ratatoskr-net
+    healthcheck:
+      test: ["CMD", "sh", "-c", "timeout 3 bash -c '</dev/tcp/localhost/50051'"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '4'          # DOUBLED from 2 to 4 CPU cores
+          memory: 4G         # DOUBLED from 2G to 4G memory  
+        reservations:
+          cpus: '2'          # DOUBLED from 1 to 2 CPU cores
+          memory: 1G         # DOUBLED from 512M to 1G
+
+  benchmark:
+    build:
+      context: .
+      dockerfile: Dockerfile.benchmark
+    container_name: ratatoskr-benchmark
+    depends_on:
+      ratatoskr:
+        condition: service_healthy
+    environment:
+      - RATATOSKR_GRPC_HOST=ratatoskr
+      - RATATOSKR_GRPC_PORT=50051
+    networks:
+      - ratatoskr-net
+    profiles:
+      - benchmark
+    deploy:
+      resources:
+        limits:
+          cpus: '2'          # DOUBLED from 1 to 2 CPU cores
+          memory: 2G         # DOUBLED from 1G to 2G memory
+
+networks:
+  ratatoskr-net:
+    driver: bridge

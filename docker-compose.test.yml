@@ -1,0 +1,26 @@
+services:
+  benchmark:
+    build:
+      context: .
+      dockerfile: Dockerfile.benchmark
+    container_name: ratatoskr-benchmark
+    depends_on:
+      ratatoskr:
+        condition: service_healthy
+    environment:
+      - RATATOSKR_GRPC_HOST=ratatoskr
+      - RATATOSKR_GRPC_PORT=50051
+    networks:
+      - ratatoskr-net
+    command: >
+      sh -c "
+        echo 'Waiting for broker to be ready...' &&
+        sleep 10 &&
+        echo '🚀 Testing Docker setup with small scale benchmark...' &&
+        elixir benchmark/concurrent_grpc_publisher.exs 1000 5 2 &&
+        echo '✅ Docker setup test complete!'
+      "
+
+networks:
+  ratatoskr-net:
+    external: true

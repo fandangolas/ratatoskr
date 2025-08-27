@@ -1,0 +1,53 @@
+# Benchmark container
+FROM elixir:1.17.3-otp-27-alpine
+
+# Install build dependencies
+RUN apk add --no-cache build-base git
+
+# Set working directory
+WORKDIR /app
+
+# Install hex + rebar
+RUN mix local.hex --force && \
+    mix local.rebar --force
+
+# Set ENV
+ENV MIX_ENV=test
+
+# Copy mix files
+COPY mix.exs mix.lock ./
+COPY config config
+
+# Install mix dependencies
+RUN mix deps.get
+RUN mix deps.compile
+
+# Copy application files
+COPY lib lib
+COPY priv priv
+COPY benchmark benchmark
+
+# Compile application
+RUN mix compile
+
+# Create a script to run benchmarks
+RUN cat > /app/run_benchmarks.sh << 'EOF'
+#!/bin/bash
+echo "Waiting for broker to be ready..."
+sleep 10
+echo ""
+echo "🚀 Running Performance Benchmarks against gRPC broker at ${RATATOSKR_GRPC_HOST}:${RATATOSKR_GRPC_PORT}"
+echo ""
+echo "=== Running Concurrent gRPC Publisher Benchmark (Small Scale) ==="
+echo "Publishing 10,000 messages across 10 topics with 5 concurrent publishers..."
+elixir benchmark/concurrent_grpc_publisher.exs 10000 10 5
+echo ""
+echo "=== Running Medium Scale Test ==="
+echo "Publishing 50,000 messages across 50 topics with 10 concurrent publishers..."
+elixir benchmark/concurrent_grpc_publisher.exs 50000 50 10
+echo ""
+echo "✅ Benchmarks complete!"
+EOF
+RUN chmod +x /app/run_benchmarks.sh
+
+CMD ["/app/run_benchmarks.sh"]

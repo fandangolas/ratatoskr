@@ -8,7 +8,7 @@ defmodule Ratatoskr.Servers.GrpcEndpoint do
   use GenServer
   require Logger
 
-  @default_port 9090
+  @default_port 50051
 
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
@@ -16,7 +16,9 @@ defmodule Ratatoskr.Servers.GrpcEndpoint do
 
   @impl true
   def init(opts) do
-    port = Keyword.get(opts, :port, @default_port)
+    # Get port from runtime configuration or opts
+    config_port = Application.get_env(:ratatoskr, :grpc_port, @default_port)
+    port = Keyword.get(opts, :port, config_port)
 
     Logger.info("Starting gRPC endpoint on port #{port}")
 
@@ -33,13 +35,30 @@ defmodule Ratatoskr.Servers.GrpcEndpoint do
   end
 
   defp start_grpc_server(port) do
+    # Get host from runtime configuration
+    host = Application.get_env(:ratatoskr, :grpc_host, "0.0.0.0")
+    
+    # Parse host to IP tuple format
+    ip = case host do
+      "0.0.0.0" -> {0, 0, 0, 0}
+      "127.0.0.1" -> {127, 0, 0, 1}
+      _ -> parse_ip_string(host)
+    end
+    
     # Start the gRPC server supervisor with our service
     GRPC.Server.Supervisor.start_link(
       port: port,
       start_server: true,
-      adapter_opts: [ip: {0, 0, 0, 0}],
+      adapter_opts: [ip: ip],
       servers: [Ratatoskr.Interfaces.Grpc.Server]
     )
+  end
+  
+  defp parse_ip_string(host) do
+    case :inet.parse_address(to_charlist(host)) do
+      {:ok, ip_tuple} -> ip_tuple
+      _ -> {0, 0, 0, 0}  # Default fallback
+    end
   end
 
   @impl true

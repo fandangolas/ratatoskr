@@ -83,6 +83,7 @@ defmodule Ratatoskr.Servers.BrokerServer do
     case ManageTopics.create(topic_name, opts, Container.deps()) do
       {:ok, _topic_pid} ->
         new_state = %{state | topic_count: state.topic_count + 1}
+        Logger.info("Topic #{topic_name} successfully created!")
         {:reply, {:ok, topic_name}, new_state}
 
       {:error, :already_exists} ->

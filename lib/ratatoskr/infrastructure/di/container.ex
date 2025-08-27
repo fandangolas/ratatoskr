@@ -233,30 +233,43 @@ defmodule Ratatoskr.Infrastructure.DI.Container do
   # Private implementation resolvers
 
   defp registry do
-    case Mix.env() do
+    env = get_env()
+    case env do
       :test -> test_registry()
       _ -> Application.get_env(:ratatoskr, :registry, default_registry())
     end
   end
 
   defp storage do
-    case Mix.env() do
+    env = get_env()
+    case env do
       :test -> test_storage()
       _ -> Application.get_env(:ratatoskr, :storage, default_storage())
     end
   end
 
   defp metrics do
-    case Mix.env() do
+    env = get_env()
+    case env do
       :test -> test_metrics()
       _ -> Application.get_env(:ratatoskr, :metrics, default_metrics())
     end
   end
 
   defp event_publisher do
-    case Mix.env() do
+    env = get_env()
+    case env do
       :test -> test_event_publisher()
       _ -> Application.get_env(:ratatoskr, :event_publisher, default_event_publisher())
+    end
+  end
+
+  # Helper function to get environment since Mix is not available in releases
+  defp get_env do
+    try do
+      Application.get_env(:ratatoskr, :config_env, :prod)
+    rescue
+      _ -> :prod
     end
   end
 

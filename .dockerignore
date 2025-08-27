@@ -1,0 +1,56 @@
+# Dependencies
+deps/
+_build/
+
+# Test coverage
+cover/
+coverage/
+
+# Documentation
+doc/
+docs/
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Environment files
+.env
+.env.*
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+
+# Docker files (don't copy into context)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# CI/CD
+.github/
+
+# Documentation
+*.md
+LICENSE
+
+# Development scripts (not needed in container)
+scripts/
+
+# Local benchmark results
+benchmark_results/

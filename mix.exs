@@ -24,6 +24,12 @@ defmodule Ratatoskr.MixProject do
         "coveralls.post": :test,
         "coveralls.html": :test,
         "coveralls.json": :test
+      ],
+      releases: [
+        ratatoskr: [
+          include_executables_for: [:unix],
+          applications: [runtime_tools: :permanent]
+        ]
       ]
     ]
   end
@@ -36,7 +42,7 @@ defmodule Ratatoskr.MixProject do
   def application do
     [
       extra_applications: [:logger],
-      mod: {Ratatoskr.Application, []}
+      mod: {Ratatoskr.Servers.Application, []}
     ]
   end
 

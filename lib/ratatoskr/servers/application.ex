@@ -8,28 +8,35 @@ defmodule Ratatoskr.Servers.Application do
 
   use Application
   alias Ratatoskr.Infrastructure.DI.Container
+  alias Ratatoskr.Infrastructure.DI.Lifecycle
+  alias Ratatoskr.Infrastructure.Registry.ProcessRegistry
+  alias Ratatoskr.Infrastructure.Storage.EtsAdapter
   alias Ratatoskr.Infrastructure.Telemetry.MetricsCollector
+
+  alias Ratatoskr.Servers.GrpcEndpoint
+  alias Ratatoskr.Servers.Supervisor
+
 
   @impl true
   def start(_type, _args) do
     children = [
       # Infrastructure layer
-      {Ratatoskr.Infrastructure.Registry.ProcessRegistry, []},
-      {Ratatoskr.Infrastructure.Storage.EtsAdapter, []},
+      {ProcessRegistry, []},
+      {EtsAdapter, []},
 
       # Dependency injection lifecycle manager
-      {Ratatoskr.Infrastructure.DI.Lifecycle, []},
+      {Lifecycle, []},
 
       # Process management layer
-      {Ratatoskr.Servers.Supervisor, []},
+      {Supervisor, []},
 
       # Interface layer
-      {Ratatoskr.Servers.GrpcEndpoint, []}
+      {GrpcEndpoint, []}
     ]
 
     opts = [strategy: :one_for_one, name: Ratatoskr.ApplicationSupervisor]
 
-    case Supervisor.start_link(children, opts) do
+    case Elixir.Supervisor.start_link(children, opts) do
       {:ok, pid} ->
         # Configure lifecycle dependencies
         Container.configure_lifecycle()
