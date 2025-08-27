@@ -25,7 +25,9 @@ import Config
 #     ]
 #   ]
 
-# Logger configuration
+# BEAM VM scheduler optimization moved to vm.args file for release builds
+
+# Logger configuration  
 config :logger,
   level: :info,
   format: "$time $metadata[$level] $message\n"

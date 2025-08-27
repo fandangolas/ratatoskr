@@ -1,0 +1,42 @@
+{
+  "id": null,
+  "title": "Ratatoskr Simple Dashboard",
+  "tags": ["ratatoskr"],
+  "timezone": "browser",
+  "panels": [
+    {
+      "id": 1,
+      "title": "System Info",
+      "type": "stat",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "expr": "ratatoskr_system_info",
+          "legendFormat": "System Status",
+          "refId": "A"
+        }
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      }
+    }
+  ],
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "refresh": "5s",
+  "schemaVersion": 30,
+  "version": 1
+}

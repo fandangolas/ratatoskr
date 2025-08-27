@@ -308,12 +308,96 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "vis": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "id": 19,
+      "options": {
+        "legend": {
+          "calcs": ["last"],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "100 - (irate(node_cpu_seconds_total{mode=\"idle\"}[5m]) * 100)",
+          "legendFormat": "CPU {{cpu}}",
+          "refId": "A"
+        }
+      ],
+      "title": "CPU Usage per Core",
+      "type": "timeseries"
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 9
+        "y": 17
       },
       "id": 5,
       "panels": [],
@@ -380,7 +464,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 10
+        "y": 18
       },
       "id": 6,
       "options": {
@@ -396,12 +480,12 @@
       },
       "targets": [
         {
-          "expr": "rate(ratatoskr_messages_published_total[1m])",
+          "expr": "irate(ratatoskr_messages_published_total[30s])",
           "legendFormat": "Messages/sec (Published)",
           "refId": "A"
         },
         {
-          "expr": "rate(ratatoskr_messages_consumed_total[1m])",
+          "expr": "irate(ratatoskr_messages_consumed_total[30s])",
           "legendFormat": "Messages/sec (Consumed)",
           "refId": "B"
         }
@@ -473,7 +557,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 10
+        "y": 18
       },
       "id": 7,
       "options": {
@@ -696,7 +780,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 26
+        "y": 18
       },
       "id": 10,
       "panels": [],
@@ -763,7 +847,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 27
+        "y": 43
       },
       "id": 11,
       "options": {
@@ -779,17 +863,17 @@
       },
       "targets": [
         {
-          "expr": "rate(ratatoskr_grpc_requests_total{method=\"publish\"}[1m])",
+          "expr": "irate(ratatoskr_grpc_requests_total{method=\"publish\"}[30s])",
           "legendFormat": "Publish Requests/sec",
           "refId": "A"
         },
         {
-          "expr": "rate(ratatoskr_grpc_requests_total{method=\"publish_batch\"}[1m])",
+          "expr": "irate(ratatoskr_grpc_requests_total{method=\"publish_batch\"}[30s])",
           "legendFormat": "Batch Requests/sec",
           "refId": "B"
         },
         {
-          "expr": "rate(ratatoskr_grpc_requests_total{method=\"subscribe\"}[1m])",
+          "expr": "irate(ratatoskr_grpc_requests_total{method=\"subscribe\"}[30s])",
           "legendFormat": "Subscribe Requests/sec",
           "refId": "C"
         }
@@ -857,7 +941,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 27
+        "y": 43
       },
       "id": 12,
       "options": {
@@ -967,7 +1051,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 27
+        "y": 43
       },
       "id": 13,
       "options": {
@@ -983,12 +1067,12 @@
       },
       "targets": [
         {
-          "expr": "rate(ratatoskr_grpc_requests_total{status=\"success\"}[1m])",
+          "expr": "irate(ratatoskr_grpc_requests_total{status=\"success\"}[30s])",
           "legendFormat": "Success",
           "refId": "A"
         },
         {
-          "expr": "rate(ratatoskr_grpc_requests_total{status=\"error\"}[1m])",
+          "expr": "irate(ratatoskr_grpc_requests_total{status=\"error\"}[30s])",
           "legendFormat": "Errors",
           "refId": "B"
         }
@@ -1002,7 +1086,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 43
       },
       "id": 14,
       "panels": [],
@@ -1049,7 +1133,7 @@
         "h": 8,
         "w": 6,
         "x": 0,
-        "y": 36
+        "y": 44
       },
       "id": 15,
       "options": {
@@ -1068,7 +1152,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "rate(ratatoskr_messages_published_total[1m])",
+          "expr": "irate(ratatoskr_messages_published_total[30s])",
           "refId": "A"
         }
       ],
@@ -1111,7 +1195,7 @@
         "h": 8,
         "w": 6,
         "x": 6,
-        "y": 36
+        "y": 44
       },
       "id": 16,
       "options": {
@@ -1162,7 +1246,7 @@
         "h": 8,
         "w": 6,
         "x": 12,
-        "y": 36
+        "y": 44
       },
       "id": 17,
       "options": {
@@ -1185,12 +1269,12 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(ratatoskr_grpc_requests_total{status=\"success\"}[5m]))",
+          "expr": "sum(irate(ratatoskr_grpc_requests_total{status=\"success\"}[5m]))",
           "legendFormat": "Success",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(ratatoskr_grpc_requests_total{status=\"error\"}[5m]))",
+          "expr": "sum(irate(ratatoskr_grpc_requests_total{status=\"error\"}[5m]))",
           "legendFormat": "Errors",
           "refId": "B"
         }
@@ -1242,7 +1326,7 @@
         "h": 8,
         "w": 6,
         "x": 18,
-        "y": 36
+        "y": 44
       },
       "id": 18,
       "options": {

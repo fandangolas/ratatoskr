@@ -31,6 +31,7 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
 
   alias Ratatoskr.Core.Logic.Subscription
   alias Ratatoskr.Infrastructure.DI.Container
+  alias Ratatoskr.Infrastructure.Monitoring.MetricsEndpoint
   alias Ratatoskr.Interfaces.Grpc.Mappers
   alias Ratatoskr.UseCases.{ManageTopics, PublishMessage, PublishMessageBatch, SubscribeToTopic}
 
@@ -149,6 +150,10 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
 
     case PublishMessage.execute(request.topic, request.payload, opts, Container.deps()) do
       {:ok, message_id} ->
+        # Increment real metrics
+        MetricsEndpoint.increment_counter(:messages_published, 1)
+        MetricsEndpoint.increment_counter(:grpc_publish_success, 1)
+        
         %PublishResponse{
           message_id: message_id,
           timestamp: :os.system_time(:millisecond),
@@ -157,6 +162,9 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
         }
 
       {:error, reason} ->
+        # Increment error metrics
+        MetricsEndpoint.increment_counter(:grpc_publish_error, 1)
+        
         %PublishResponse{
           message_id: "",
           timestamp: :os.system_time(:millisecond),
@@ -202,6 +210,13 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
 
         success_count = Enum.count(results, & &1.success)
         error_count = length(results) - success_count
+        
+        # Increment real batch metrics
+        MetricsEndpoint.increment_counter(:messages_published, success_count)
+        MetricsEndpoint.increment_counter(:grpc_publish_batch_success, 1)
+        if error_count > 0 do
+          MetricsEndpoint.increment_counter(:grpc_publish_batch_error, 1)
+        end
 
         %PublishBatchResponse{
           results: results,
@@ -210,6 +225,9 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
         }
 
       {:error, reason} ->
+        # Increment batch error metrics
+        MetricsEndpoint.increment_counter(:grpc_publish_batch_error, 1)
+        
         # Return error for all messages
         results =
           Enum.map(request.messages, fn _msg ->
@@ -290,6 +308,9 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
     case SubscribeToTopic.execute(request.topic, self(), opts, Container.deps()) do
       {:ok, subscription_ref} ->
         Logger.debug("gRPC subscription established: #{inspect(subscription_ref)}")
+        
+        # Increment successful subscribe metrics
+        MetricsEndpoint.increment_counter(:grpc_subscribe_success, 1)
 
         # Start a process to handle messages and forward them to the gRPC stream
         spawn_link(fn -> handle_subscription(stream, subscription_ref, request.topic) end)
@@ -299,6 +320,10 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
 
       {:error, reason} ->
         Logger.error("gRPC subscription failed: #{reason}")
+        
+        # Increment subscribe error metrics
+        MetricsEndpoint.increment_counter(:grpc_subscribe_error, 1)
+        
         GRPC.Server.send_reply(stream, {:error, to_string(reason)})
     end
   end
@@ -311,6 +336,9 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
 
         # Send to gRPC stream
         GRPC.Server.send_reply(stream, grpc_message)
+        
+        # Increment message consumed counter
+        MetricsEndpoint.increment_counter(:messages_consumed, 1)
 
         # Continue listening for more messages
         handle_subscription(stream, subscription_ref, topic)
