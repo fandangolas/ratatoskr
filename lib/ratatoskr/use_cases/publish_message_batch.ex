@@ -10,6 +10,7 @@ defmodule Ratatoskr.UseCases.PublishMessageBatch do
   """
 
   alias Ratatoskr.Core.Logic.Message
+  alias Ratatoskr.UseCases.ManageTopics
 
   @type batch_message :: %{
           topic: String.t(),
@@ -115,7 +116,7 @@ defmodule Ratatoskr.UseCases.PublishMessageBatch do
         # All messages created successfully
         message_structs = Enum.map(successful_messages, fn {:ok, msg} -> msg end)
 
-        # Single GenServer call for the entire batch  
+        # Single GenServer call for the entire batch
         try do
           case GenServer.call(topic_pid, {:publish_batch, message_structs}, 30_000) do
             {:ok, message_ids} when is_list(message_ids) ->
@@ -232,7 +233,7 @@ defmodule Ratatoskr.UseCases.PublishMessageBatch do
           {:ok, [batch_result()]} | {:error, any()}
   defp create_topic_and_publish(topic, messages, deps) do
     # Use existing topic creation logic
-    case Ratatoskr.UseCases.ManageTopics.create(topic, [], deps) do
+    case ManageTopics.create(topic, [], deps) do
       {:ok, topic_pid} ->
         results = publish_batch_to_topic(topic_pid, topic, messages, deps)
         {:ok, results}

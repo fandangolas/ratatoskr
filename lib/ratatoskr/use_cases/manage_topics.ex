@@ -6,6 +6,7 @@ defmodule Ratatoskr.UseCases.ManageTopics do
   """
 
   alias Ratatoskr.Core.Logic.Topic
+  alias Ratatoskr.Infrastructure.Cache.TopicCache
   alias Ratatoskr.Infrastructure.Partitioning.PartitionedTopic
   alias Ratatoskr.Servers.TopicServer
 
@@ -51,7 +52,7 @@ defmodule Ratatoskr.UseCases.ManageTopics do
         pid when is_pid(pid) ->
           GenServer.stop(pid, :normal, 5000)
           registry.unregister_topic(topic_name)
-          Ratatoskr.Infrastructure.Cache.TopicCache.invalidate(topic_name)
+          TopicCache.invalidate(topic_name)
           :ok
 
         nil ->
@@ -89,7 +90,7 @@ defmodule Ratatoskr.UseCases.ManageTopics do
   def stats(topic_name, %{registry: registry} = _deps) do
     case registry.lookup_topic(topic_name) do
       {:ok, topic_pid} ->
-        Ratatoskr.Servers.TopicServer.get_stats(topic_pid)
+        TopicServer.get_stats(topic_pid)
 
       {:error, :not_found} ->
         {:error, :topic_not_found}
@@ -106,7 +107,7 @@ defmodule Ratatoskr.UseCases.ManageTopics do
         # Register the partitioned topic
         case deps.registry.register_topic(topic_name, partitioned_topic_pid) do
           :ok ->
-            Ratatoskr.Infrastructure.Cache.TopicCache.put_topic_pid(
+            TopicCache.put_topic_pid(
               topic_name,
               partitioned_topic_pid
             )
@@ -115,7 +116,7 @@ defmodule Ratatoskr.UseCases.ManageTopics do
 
           {:error, :already_registered} ->
             if allow_existing do
-              Ratatoskr.Infrastructure.Cache.TopicCache.put_topic_pid(
+              TopicCache.put_topic_pid(
                 topic_name,
                 partitioned_topic_pid
               )
@@ -131,7 +132,7 @@ defmodule Ratatoskr.UseCases.ManageTopics do
 
       {:error, {:already_started, pid}} ->
         if allow_existing do
-          Ratatoskr.Infrastructure.Cache.TopicCache.put_topic_pid(topic_name, pid)
+          TopicCache.put_topic_pid(topic_name, pid)
           {:ok, pid}
         else
           {:error, :already_exists}
@@ -147,13 +148,13 @@ defmodule Ratatoskr.UseCases.ManageTopics do
          {:ok, topic_pid} <- start_topic_server(topic),
          :ok <- register_topic(topic_name, topic_pid, registry) do
       # Cache the topic PID for optimized lookups
-      Ratatoskr.Infrastructure.Cache.TopicCache.put_topic_pid(topic_name, topic_pid)
+      TopicCache.put_topic_pid(topic_name, topic_pid)
       {:ok, topic_pid}
     else
       {:error, {:already_started, pid}} ->
         if allow_existing do
           # Cache existing PID too
-          Ratatoskr.Infrastructure.Cache.TopicCache.put_topic_pid(topic_name, pid)
+          TopicCache.put_topic_pid(topic_name, pid)
           {:ok, pid}
         else
           {:error, :already_exists}
@@ -170,7 +171,7 @@ defmodule Ratatoskr.UseCases.ManageTopics do
         :ok = stop_topic_server(topic_pid)
         :ok = registry.unregister_topic(topic_name)
         # Invalidate cache entry
-        Ratatoskr.Infrastructure.Cache.TopicCache.invalidate(topic_name)
+        TopicCache.invalidate(topic_name)
         :ok
 
       {:error, :not_found} ->

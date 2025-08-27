@@ -17,6 +17,7 @@ defmodule Ratatoskr.UseCases.PublishPartitionedMessage do
   alias Ratatoskr.Core.Logic.Message
   alias Ratatoskr.Infrastructure.Partitioning.PartitionedTopic
   alias Ratatoskr.UseCases.PublishMessage
+  alias Ratatoskr.UseCases.PublishMessageBatch
 
   @type deps :: %{
           registry: module(),
@@ -99,7 +100,7 @@ defmodule Ratatoskr.UseCases.PublishPartitionedMessage do
                   }
                 end)
 
-              case Ratatoskr.UseCases.PublishMessageBatch.execute(fallback_batch_messages, deps) do
+              case PublishMessageBatch.execute(fallback_batch_messages, deps) do
                 {:ok, batch_results} ->
                   Enum.map(batch_results, fn result ->
                     # Add partition_id for consistency

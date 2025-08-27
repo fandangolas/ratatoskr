@@ -6,10 +6,10 @@ defmodule RatatoskrGrpcIntegrationTest do
 
   use ExUnit.Case, async: false
 
-  alias Ratatoskr.Grpc.{PublishRequest, CreateTopicRequest, DeleteTopicRequest}
+  alias Ratatoskr.Grpc.{CreateTopicRequest, DeleteTopicRequest, PublishRequest}
   import ApplicationHelper
 
-  @grpc_port Application.compile_env(:ratatoskr, :grpc_port, 50053)
+  @grpc_port Application.compile_env(:ratatoskr, :grpc_port, 50_053)
   @test_topic "grpc-integration-test"
 
   setup_all do

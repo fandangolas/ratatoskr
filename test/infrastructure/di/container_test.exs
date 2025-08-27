@@ -1,6 +1,6 @@
 defmodule Ratatoskr.Infrastructure.DI.ContainerTest do
   use ExUnit.Case, async: true
-  alias Ratatoskr.Infrastructure.DI.Container
+  alias Ratatoskr.Infrastructure.DI.{Container, Lifecycle}
 
   describe "Container.deps/0" do
     test "returns all required dependencies" do
@@ -93,8 +93,8 @@ defmodule Ratatoskr.Infrastructure.DI.ContainerTest do
   describe "lifecycle management" do
     setup do
       # Ensure lifecycle manager is running
-      unless Process.whereis(Ratatoskr.Infrastructure.DI.Lifecycle) do
-        {:ok, _pid} = Ratatoskr.Infrastructure.DI.Lifecycle.start_link()
+      unless Process.whereis(Lifecycle) do
+        {:ok, _pid} = Lifecycle.start_link()
       end
 
       :ok
@@ -102,7 +102,6 @@ defmodule Ratatoskr.Infrastructure.DI.ContainerTest do
 
     test "get_singleton delegates to lifecycle manager" do
       # Mock a singleton registration (would normally be done in config)
-      alias Ratatoskr.Infrastructure.DI.Lifecycle
 
       defmodule TestSingleton do
         def start_link(_args), do: {:ok, spawn(fn -> :timer.sleep(1000) end)}
@@ -116,8 +115,6 @@ defmodule Ratatoskr.Infrastructure.DI.ContainerTest do
     end
 
     test "get_process_scoped delegates to lifecycle manager" do
-      alias Ratatoskr.Infrastructure.DI.Lifecycle
-
       defmodule TestProcessScoped do
         def start_link(_args), do: {:ok, spawn(fn -> :timer.sleep(1000) end)}
       end
@@ -130,8 +127,6 @@ defmodule Ratatoskr.Infrastructure.DI.ContainerTest do
     end
 
     test "get_transient delegates to lifecycle manager" do
-      alias Ratatoskr.Infrastructure.DI.Lifecycle
-
       defmodule TestTransient do
         def create(name), do: %{name: name, id: make_ref()}
       end
@@ -167,7 +162,7 @@ defmodule Ratatoskr.Infrastructure.DI.ContainerTest do
   describe "error handling" do
     test "gracefully handles lifecycle manager not running" do
       # Stop lifecycle manager
-      pid = Process.whereis(Ratatoskr.Infrastructure.DI.Lifecycle)
+      pid = Process.whereis(Lifecycle)
 
       if pid && Process.alive?(pid) do
         GenServer.stop(pid)
@@ -181,8 +176,8 @@ defmodule Ratatoskr.Infrastructure.DI.ContainerTest do
 
     test "handles invalid dependency keys" do
       # Restart lifecycle manager if needed
-      unless Process.whereis(Ratatoskr.Infrastructure.DI.Lifecycle) do
-        {:ok, _} = Ratatoskr.Infrastructure.DI.Lifecycle.start_link()
+      unless Process.whereis(Lifecycle) do
+        {:ok, _} = Lifecycle.start_link()
       end
 
       assert {:error, :not_registered} = Container.get_singleton(:invalid_key)

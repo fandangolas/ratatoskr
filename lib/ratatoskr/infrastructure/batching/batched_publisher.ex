@@ -73,14 +73,14 @@ defmodule Ratatoskr.Infrastructure.Batching.BatchedPublisher do
   Forces immediate flush of all pending messages.
   Useful for testing or ensuring delivery before shutdown.
   """
-  def flush() do
+  def flush do
     GenServer.call(__MODULE__, :flush)
   end
 
   @doc """
   Gets current batching statistics.
   """
-  def stats() do
+  def stats do
     GenServer.call(__MODULE__, :get_stats)
   end
 

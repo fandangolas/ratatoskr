@@ -56,14 +56,14 @@ defmodule Ratatoskr.Infrastructure.Batching.MessageBatcher do
   @doc """
   Force flush all pending messages immediately.
   """
-  def flush() do
+  def flush do
     GenServer.call(__MODULE__, :flush)
   end
 
   @doc """
   Get current batch statistics.
   """
-  def stats() do
+  def stats do
     GenServer.call(__MODULE__, :stats)
   end
 

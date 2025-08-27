@@ -57,9 +57,7 @@ defmodule Ratatoskr.MixProject do
       # Utilities
       {:uuid, "~> 1.1"},
 
-      # Monitoring (lightweight - no hot path metrics)
-      {:prometheus_ex, "~> 3.0"},
-      {:prometheus_plugs, "~> 1.1"},
+      # Web server and monitoring
       {:plug_cowboy, "~> 2.0"},
       {:telemetry, "~> 1.0"},
 

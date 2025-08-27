@@ -18,6 +18,7 @@ defmodule Ratatoskr.Infrastructure.Partitioning.PartitionManager do
   require Logger
 
   alias Ratatoskr.Infrastructure.DI.Container
+  alias Ratatoskr.Servers.TopicServer
 
   defmodule State do
     @moduledoc false
@@ -233,7 +234,7 @@ defmodule Ratatoskr.Infrastructure.Partitioning.PartitionManager do
     }
 
     # Start the partition server
-    case Ratatoskr.Servers.TopicServer.start_link(topic_config) do
+    case TopicServer.start_link(topic_config) do
       {:ok, pid} ->
         {:ok, pid}
 

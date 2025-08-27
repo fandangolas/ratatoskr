@@ -278,7 +278,7 @@ defmodule BenchmarkHelpers do
       count: len,
       # Convert μs to ms
       min: (Enum.min(sorted) / 1000) |> Float.round(3),
-      # Convert μs to ms  
+      # Convert μs to ms
       max: (Enum.max(sorted) / 1000) |> Float.round(3),
       # Median
       p50: percentile(sorted, 0.50) |> Float.round(3),
