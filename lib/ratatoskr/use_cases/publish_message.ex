@@ -57,7 +57,7 @@ defmodule Ratatoskr.UseCases.PublishMessage do
   end
 
   defp find_or_create_topic(topic_name, %{registry: registry}) when not is_nil(registry) do
-    case registry.lookup_topic(topic_name) do
+    case Ratatoskr.Infrastructure.Cache.TopicCache.get_topic_pid(topic_name, registry) do
       {:ok, pid} ->
         {:ok, pid}
 

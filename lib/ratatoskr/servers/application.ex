@@ -23,6 +23,7 @@ defmodule Ratatoskr.Servers.Application do
       # Infrastructure layer
       {ProcessRegistry, []},
       {EtsAdapter, []},
+      {Ratatoskr.Infrastructure.Cache.TopicCache, []},
 
       # Dependency injection lifecycle manager
       {Lifecycle, []},

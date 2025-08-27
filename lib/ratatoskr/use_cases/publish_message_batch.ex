@@ -155,9 +155,10 @@ defmodule Ratatoskr.UseCases.PublishMessageBatch do
 
   @spec find_topic_process(String.t(), module()) :: {:ok, pid()} | {:error, :not_found}
   defp find_topic_process(topic, registry) do
-    case registry.lookup(topic) do
-      [{pid, _}] when is_pid(pid) -> {:ok, pid}
-      [] -> {:error, :not_found}
+    # Use topic cache for optimized lookups
+    case Ratatoskr.Infrastructure.Cache.TopicCache.get_topic_pid(topic, registry) do
+      {:ok, pid} -> {:ok, pid}
+      {:error, :not_found} -> {:error, :not_found}
     end
   end
 end
