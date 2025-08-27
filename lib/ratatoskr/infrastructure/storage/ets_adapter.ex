@@ -210,6 +210,6 @@ defmodule Ratatoskr.Infrastructure.Storage.EtsAdapter do
     # Rough estimate for memory accounting
     # Real implementation would calculate actual message size
     # 1KB average
-    1024
+    1_024
   end
 end

@@ -227,7 +227,7 @@ defmodule Ratatoskr.Infrastructure.Partitioning.PartitionManager do
       name: partition_name,
       partition_id: partition_id,
       parent_topic: topic_name,
-      max_subscribers: 1000,
+      max_subscribers: 1_000,
       # 24 hours
       retention_ms: 86_400_000
     }

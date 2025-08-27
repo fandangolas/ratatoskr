@@ -50,7 +50,7 @@ defmodule Ratatoskr.UseCases.PublishPartitionedMessage do
     partition_key = Keyword.get(opts, :partition_key)
 
     # Check if topic uses partitioning
-    case is_partitioned_topic?(topic_name, deps) do
+    case partitioned_topic?(topic_name, deps) do
       true ->
         publish_to_partitioned_topic(topic_name, payload, partition_key, opts, deps)
 
@@ -84,7 +84,7 @@ defmodule Ratatoskr.UseCases.PublishPartitionedMessage do
     tasks =
       for {topic_name, topic_messages} <- grouped_messages do
         Task.async(fn ->
-          case is_partitioned_topic?(topic_name, deps) do
+          case partitioned_topic?(topic_name, deps) do
             true ->
               publish_batch_to_partitioned_topic(topic_name, topic_messages, deps)
 
@@ -135,7 +135,7 @@ defmodule Ratatoskr.UseCases.PublishPartitionedMessage do
 
   ## Private Functions
 
-  defp is_partitioned_topic?(topic_name, _deps) do
+  defp partitioned_topic?(topic_name, _deps) do
     # Check if partitioning is enabled globally
     partitioning_config = Application.get_env(:ratatoskr, :partitioning, [])
     partitioning_enabled = Keyword.get(partitioning_config, :enable_partitioning, false)

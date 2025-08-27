@@ -236,8 +236,7 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
         partition_counts =
           batch_results
           |> Enum.group_by(& &1.partition_id)
-          |> Enum.map(fn {partition_id, msgs} -> "P#{partition_id}:#{length(msgs)}" end)
-          |> Enum.join(", ")
+          |> Enum.map_join(", ", fn {partition_id, msgs} -> "P#{partition_id}:#{length(msgs)}" end)
 
         Logger.debug("Batch published across partitions: #{partition_counts}")
 

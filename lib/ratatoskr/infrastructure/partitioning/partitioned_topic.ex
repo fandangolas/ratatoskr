@@ -17,8 +17,8 @@ defmodule Ratatoskr.Infrastructure.Partitioning.PartitionedTopic do
   use GenServer
   require Logger
 
-  alias Ratatoskr.Infrastructure.Partitioning.PartitionManager
   alias Ratatoskr.Infrastructure.DI.Container
+  alias Ratatoskr.Infrastructure.Partitioning.PartitionManager
 
   defmodule State do
     @moduledoc false

@@ -8,7 +8,7 @@ defmodule Ratatoskr.Servers.GrpcEndpoint do
   use GenServer
   require Logger
 
-  @default_port 50051
+  @default_port 50_051
 
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
@@ -49,8 +49,8 @@ defmodule Ratatoskr.Servers.GrpcEndpoint do
     # Get configurable performance settings
     max_connections = Application.get_env(:ratatoskr, :grpc_max_connections, 32_768)
     num_acceptors = Application.get_env(:ratatoskr, :grpc_num_acceptors, 100)
-    send_buffer = Application.get_env(:ratatoskr, :grpc_send_buffer_size, 65536)
-    recv_buffer = Application.get_env(:ratatoskr, :grpc_recv_buffer_size, 65536)
+    send_buffer = Application.get_env(:ratatoskr, :grpc_send_buffer_size, 65_536)
+    recv_buffer = Application.get_env(:ratatoskr, :grpc_recv_buffer_size, 65_536)
 
     # Optimized adapter options for high performance
     adapter_opts = [
@@ -73,7 +73,7 @@ defmodule Ratatoskr.Servers.GrpcEndpoint do
         # Disable Nagle's algorithm
         {:nodelay, true},
         # 5s send timeout
-        {:send_timeout, 5000},
+        {:send_timeout, 5_000},
         # Close on send timeout
         {:send_timeout_close, true},
         # Enable TCP keepalive
