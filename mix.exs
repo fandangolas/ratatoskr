@@ -54,6 +54,12 @@ defmodule Ratatoskr.MixProject do
       {:protobuf, "~> 0.12"},
       {:jason, "~> 1.4"},
 
+      # Monitoring (lightweight - no hot path metrics)
+      {:prometheus_ex, "~> 3.0"},
+      {:prometheus_plugs, "~> 1.1"},
+      {:plug_cowboy, "~> 2.0"},
+      {:telemetry, "~> 1.0"},
+
       # Development and testing tools
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: :test},

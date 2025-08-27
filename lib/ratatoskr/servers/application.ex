@@ -32,7 +32,10 @@ defmodule Ratatoskr.Servers.Application do
       {Supervisor, []},
 
       # Interface layer
-      {GrpcEndpoint, []}
+      {GrpcEndpoint, []},
+      
+      # Lightweight monitoring (no hot-path overhead)
+      {Ratatoskr.Infrastructure.Monitoring.MetricsEndpoint, []}
     ]
 
     opts = [strategy: :one_for_one, name: Ratatoskr.ApplicationSupervisor]

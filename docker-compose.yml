@@ -6,6 +6,7 @@ services:
     container_name: ratatoskr-broker
     ports:
       - "50051:50051"  # gRPC port
+      - "4000:4000"    # Monitoring endpoint
     environment:
       - RATATOSKR_GRPC_PORT=50051
       - RATATOSKR_GRPC_HOST=0.0.0.0
@@ -52,6 +53,66 @@ services:
         limits:
           cpus: '2'          # DOUBLED from 1 to 2 CPU cores
           memory: 2G         # DOUBLED from 1G to 2G memory
+
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: ratatoskr-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - ratatoskr-net
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: ratatoskr-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - ratatoskr-net
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+  node-exporter:
+    image: prom/node-exporter:v1.7.0
+    container_name: ratatoskr-node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - ratatoskr-net
+    restart: unless-stopped
+
+volumes:
+  prometheus_data:
+  grafana_data:
 
 networks:
   ratatoskr-net:
