@@ -103,6 +103,16 @@ defmodule ApplicationHelper do
   end
 
   @doc """
+  Performs a complete application stop with thorough cleanup.
+
+  Use this when you need to ensure all processes are completely cleaned up.
+  """
+  def complete_application_stop do
+    force_stop_application()
+    wait_for_complete_shutdown()
+  end
+
+  @doc """
   Ensures the application is left in a running state after a test.
 
   Use in test cleanup to prevent affecting subsequent tests.
@@ -175,9 +185,15 @@ defmodule ApplicationHelper do
         # Also check Ranch server proxy specifically
         case :global.whereis_name(:ranch_server_proxy) do
           :undefined ->
-            # Give Ranch extra time to clean up
-            Process.sleep(100)
-            :ok
+            # Also check for any lingering MetricsEndpoint processes
+            if metrics_endpoint_processes_alive?() do
+              Process.sleep(50)
+              wait_for_shutdown_completion(start_time, timeout)
+            else
+              # Give Ranch extra time to clean up
+              Process.sleep(100)
+              :ok
+            end
 
           _pid ->
             Process.sleep(50)
@@ -202,8 +218,11 @@ defmodule ApplicationHelper do
         :ok
 
       {:error, reason} when retries > 0 ->
-        # Log the retry for debugging
-        if Mix.env() == :test do
+        # Check if this is a known `:already_started` issue that can be resolved
+        should_log = should_log_retry_error?(reason)
+
+        # Log the retry for debugging (but suppress common already_started issues)
+        if Mix.env() == :test and should_log do
           IO.puts(
             "Application start failed (#{inspect(reason)}), retrying... (#{retries} attempts left)"
           )
@@ -355,5 +374,43 @@ defmodule ApplicationHelper do
         _, _ -> :ok
       end
     end)
+  end
+
+  defp metrics_endpoint_processes_alive? do
+    # Check for any processes related to MetricsEndpoint/Cowboy that might be lingering
+    Process.list()
+    |> Enum.any?(fn pid ->
+      try do
+        case Process.info(pid, :initial_call) do
+          {:initial_call, {module, _fun, _arity}} ->
+            module_str = to_string(module)
+
+            module_str =~ "MetricsEndpoint" or module_str =~ "Plug.Cowboy" or
+              (module_str =~ "cowboy" and module_str =~ "http")
+
+          _ ->
+            false
+        end
+      catch
+        _, _ -> false
+      end
+    end)
+  end
+
+  defp should_log_retry_error?(reason) do
+    # Don't log retry messages for known `:already_started` issues that resolve themselves
+    case reason do
+      {:ratatoskr,
+       {{:shutdown,
+         {:failed_to_start_child, Ratatoskr.Infrastructure.Monitoring.MetricsEndpoint,
+          {:already_started, _pid}}}, _}} ->
+        false
+
+      {:ratatoskr, {{:shutdown, {:failed_to_start_child, _child, {:already_started, _pid}}}, _}} ->
+        false
+
+      _ ->
+        true
+    end
   end
 end

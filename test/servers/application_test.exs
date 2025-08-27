@@ -113,14 +113,14 @@ defmodule Ratatoskr.Servers.ApplicationTest do
       assert is_pid(agent)
       assert Process.alive?(agent)
 
-      # Stop application
-      :ok = Application.stop(:ratatoskr)
-
-      # Give time for shutdown
-      Process.sleep(100)
+      # Stop application with complete cleanup
+      complete_application_stop()
 
       # Agent should be stopped
       refute Process.alive?(agent)
+
+      # Give extra time for cleanup to fully complete before restart
+      Process.sleep(50)
 
       # IMPORTANT: Ensure application is available for subsequent tests
       assert :ok = cleanup_application_state()
@@ -145,10 +145,8 @@ defmodule Ratatoskr.Servers.ApplicationTest do
       # Wait for processes to be ready
       assert :ok = wait_for_application_processes()
 
-      # Stop application
-      :ok = Application.stop(:ratatoskr)
-      # Give extra time for clean shutdown
-      Process.sleep(100)
+      # Stop application using helper for complete cleanup
+      complete_application_stop()
 
       # Start again with retry logic
       case ensure_application_running() do
