@@ -32,7 +32,7 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
   alias Ratatoskr.Core.Logic.Subscription
   alias Ratatoskr.Infrastructure.DI.Container
   alias Ratatoskr.Interfaces.Grpc.Mappers
-  alias Ratatoskr.UseCases.{ManageTopics, PublishMessage, SubscribeToTopic}
+  alias Ratatoskr.UseCases.{ManageTopics, PublishMessage, PublishMessageBatch, SubscribeToTopic}
 
   @doc """
   Creates a new topic.
@@ -173,42 +173,60 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
   def publish_batch(request, _stream) do
     Logger.debug("gRPC PublishBatch to: #{request.topic}, count: #{length(request.messages)}")
 
-    results =
+    # Convert gRPC messages to batch_message format
+    batch_messages =
       Enum.map(request.messages, fn msg ->
         metadata = Mappers.grpc_metadata_to_map(msg.metadata)
         topic = if msg.topic != "", do: msg.topic, else: request.topic
 
-        opts = [
+        %{
+          topic: topic,
+          payload: msg.payload,
           metadata: metadata
-        ]
+        }
+      end)
 
-        case PublishMessage.execute(topic, msg.payload, opts, Container.deps()) do
-          {:ok, message_id} ->
+    # Use the optimized batch publishing use case
+    case PublishMessageBatch.execute(batch_messages, Container.deps()) do
+      {:ok, batch_results} ->
+        # Convert batch results to gRPC format
+        results =
+          Enum.map(batch_results, fn result ->
             %PublishResponse{
-              message_id: message_id,
+              message_id: result.message_id,
               timestamp: :os.system_time(:millisecond),
-              success: true,
-              error: ""
+              success: result.success,
+              error: result.error || ""
             }
+          end)
 
-          {:error, reason} ->
+        success_count = Enum.count(results, & &1.success)
+        error_count = length(results) - success_count
+
+        %PublishBatchResponse{
+          results: results,
+          success_count: success_count,
+          error_count: error_count
+        }
+
+      {:error, reason} ->
+        # Return error for all messages
+        results =
+          Enum.map(request.messages, fn _msg ->
             %PublishResponse{
               message_id: "",
               timestamp: :os.system_time(:millisecond),
               success: false,
               error: to_string(reason)
             }
-        end
-      end)
+          end)
 
-    success_count = Enum.count(results, & &1.success)
-    error_count = length(results) - success_count
-
-    %PublishBatchResponse{
-      results: results,
-      success_count: success_count,
-      error_count: error_count
-    }
+        %PublishBatchResponse{
+          results: results,
+          success_count: 0,
+          error_count: length(results)
+        }
+    end
   end
 
   @doc """

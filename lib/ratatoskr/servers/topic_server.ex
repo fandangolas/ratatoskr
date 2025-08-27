@@ -117,6 +117,41 @@ defmodule Ratatoskr.Servers.TopicServer do
   end
 
   @impl true
+  def handle_call({:publish_batch, messages}, _from, state) when is_list(messages) do
+    Logger.debug("Batch publishing #{length(messages)} messages to topic: #{state.topic.name}")
+
+    # Filter active subscribers once for the entire batch
+    active_subscribers = filter_active_subscribers(state.subscribers)
+    
+    # Process all messages in batch
+    {message_ids, new_messages_queue, total_delivered} = 
+      process_message_batch(messages, state.messages, active_subscribers)
+
+    # Update statistics for batch
+    batch_count = length(messages)
+    last_timestamp = 
+      messages
+      |> List.last()
+      |> Map.get(:timestamp, System.monotonic_time(:millisecond))
+
+    new_stats = %{
+      state.stats
+      | message_count: state.stats.message_count + batch_count,
+        last_message_at: last_timestamp
+    }
+
+    new_state = %{
+      state
+      | messages: new_messages_queue,
+        subscribers: active_subscribers,
+        stats: new_stats
+    }
+
+    Logger.debug("Batch delivered #{total_delivered} total message deliveries across #{batch_count} messages")
+    {:reply, {:ok, message_ids}, new_state}
+  end
+
+  @impl true
   def handle_call({:subscribe, %Subscription{} = subscription}, _from, state) do
     Logger.debug("Adding subscription to topic: #{state.topic.name}")
 
@@ -246,5 +281,32 @@ defmodule Ratatoskr.Servers.TopicServer do
       |> Enum.sum()
 
     delivered_count
+  end
+
+  defp process_message_batch(messages, current_queue, active_subscribers) do
+    # Process all messages and collect results
+    {message_ids, messages_for_queue, total_delivered} =
+      Enum.reduce(messages, {[], [], 0}, fn message, {ids_acc, msgs_acc, delivered_acc} ->
+        # Deliver to subscribers for this message
+        delivered_count = deliver_to_subscribers(message, active_subscribers)
+        
+        # Collect results
+        {
+          [message.id | ids_acc],
+          [message | msgs_acc], 
+          delivered_acc + delivered_count
+        }
+      end)
+
+    # Add all messages to queue efficiently
+    new_queue = 
+      messages_for_queue
+      |> Enum.reverse()  # Maintain order since we built list in reverse
+      |> Enum.reduce(current_queue, fn msg, queue_acc ->
+        :queue.in(msg, queue_acc)
+      end)
+
+    # Return results in expected format
+    {Enum.reverse(message_ids), new_queue, total_delivered}
   end
 end
