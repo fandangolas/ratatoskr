@@ -162,19 +162,17 @@ defmodule Ratatoskr.Core.Logic.Subscription do
   """
   @spec deserialize_reference(String.t()) :: reference()
   def deserialize_reference(ref_string) when is_binary(ref_string) do
-    try do
-      decoded = Base.decode64!(ref_string)
-      ref = :erlang.binary_to_term(decoded)
+    decoded = Base.decode64!(ref_string)
+    ref = :erlang.binary_to_term(decoded)
 
-      if is_reference(ref) do
-        ref
-      else
-        raise ArgumentError, "Decoded value is not a reference"
-      end
-    rescue
-      e ->
-        reraise ArgumentError, "Invalid reference format: #{Exception.message(e)}", __STACKTRACE__
+    if is_reference(ref) do
+      ref
+    else
+      raise ArgumentError, "Decoded value is not a reference"
     end
+  rescue
+    e ->
+      reraise ArgumentError, "Invalid reference format: #{Exception.message(e)}", __STACKTRACE__
   end
 
   @doc """

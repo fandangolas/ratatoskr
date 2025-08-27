@@ -362,40 +362,34 @@ defmodule Ratatoskr.Infrastructure.DI.Lifecycle do
   # Private Functions
 
   defp create_instance(%{implementation: module, args: args}) when is_atom(module) do
-    try do
-      case module.start_link(args) do
-        {:ok, pid} -> {:ok, pid}
-        {:ok, pid, _info} -> {:ok, pid}
-        {:error, {:already_started, pid}} -> {:ok, pid}
-        {:error, reason} -> {:error, reason}
-        result -> {:ok, result}
-      end
-    rescue
-      error -> {:error, error}
+    case module.start_link(args) do
+      {:ok, pid} -> {:ok, pid}
+      {:ok, pid, _info} -> {:ok, pid}
+      {:error, {:already_started, pid}} -> {:ok, pid}
+      {:error, reason} -> {:error, reason}
+      result -> {:ok, result}
     end
+  rescue
+    error -> {:error, error}
   end
 
   defp create_instance(%{implementation: {module, function, base_args}, args: extra_args}) do
-    try do
-      case apply(module, function, base_args ++ extra_args) do
-        {:ok, instance} -> {:ok, instance}
-        {:ok, instance, _info} -> {:ok, instance}
-        {:error, {:already_started, pid}} -> {:ok, pid}
-        {:error, reason} -> {:error, reason}
-        result -> {:ok, result}
-      end
-    rescue
-      error -> {:error, error}
+    case apply(module, function, base_args ++ extra_args) do
+      {:ok, instance} -> {:ok, instance}
+      {:ok, instance, _info} -> {:ok, instance}
+      {:error, {:already_started, pid}} -> {:ok, pid}
+      {:error, reason} -> {:error, reason}
+      result -> {:ok, result}
     end
+  rescue
+    error -> {:error, error}
   end
 
   defp create_instance(%{implementation: fun, args: args}) when is_function(fun) do
-    try do
-      result = apply(fun, args)
-      {:ok, result}
-    rescue
-      error -> {:error, error}
-    end
+    result = apply(fun, args)
+    {:ok, result}
+  rescue
+    error -> {:error, error}
   end
 
   defp perform_health_check(_key, %{health_check: nil}, _state) do
@@ -405,18 +399,16 @@ defmodule Ratatoskr.Infrastructure.DI.Lifecycle do
 
   defp perform_health_check(key, %{health_check: health_fun}, state)
        when is_function(health_fun) do
-    try do
-      # Get the instance to check
-      instance =
-        case Map.get(state.singletons, key) do
-          nil -> nil
-          inst -> inst
-        end
+    # Get the instance to check
+    instance =
+      case Map.get(state.singletons, key) do
+        nil -> nil
+        inst -> inst
+      end
 
-      health_fun.(instance)
-    rescue
-      _ -> false
-    end
+    health_fun.(instance)
+  rescue
+    _ -> false
   end
 
   defp shutdown_instance(key, instance) when is_pid(instance) do

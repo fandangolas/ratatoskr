@@ -72,15 +72,13 @@ defmodule Ratatoskr.UseCases.PublishMessage do
 
   defp validate_topic_can_accept_message(topic_pid) do
     # Check if topic server is responsive and not overloaded
-    try do
-      case GenServer.call(topic_pid, :health_check, 1000) do
-        :ok -> :ok
-        {:error, reason} -> {:error, reason}
-      end
-    catch
-      :exit, {:timeout, _} -> {:error, :topic_timeout}
-      :exit, {:noproc, _} -> {:error, :topic_not_found}
+    case GenServer.call(topic_pid, :health_check, 1000) do
+      :ok -> :ok
+      {:error, reason} -> {:error, reason}
     end
+  catch
+    :exit, {:timeout, _} -> {:error, :topic_timeout}
+    :exit, {:noproc, _} -> {:error, :topic_not_found}
   end
 
   defp persist_message_if_enabled(message, %{storage: storage}) when not is_nil(storage) do
@@ -93,17 +91,15 @@ defmodule Ratatoskr.UseCases.PublishMessage do
   defp persist_message_if_enabled(_message, _deps), do: :ok
 
   defp deliver_to_topic(topic_pid, message) do
-    try do
-      case GenServer.call(topic_pid, {:publish, message}) do
-        {:ok, _} -> :ok
-        # Handle partitioned topic response with {ok, message_id, partition_id}
-        {:ok, _, _} -> :ok
-        {:error, reason} -> {:error, reason}
-      end
-    catch
-      :exit, {:timeout, _} -> {:error, :delivery_timeout}
-      :exit, {:noproc, _} -> {:error, :topic_not_found}
+    case GenServer.call(topic_pid, {:publish, message}) do
+      {:ok, _} -> :ok
+      # Handle partitioned topic response with {ok, message_id, partition_id}
+      {:ok, _, _} -> :ok
+      {:error, reason} -> {:error, reason}
     end
+  catch
+    :exit, {:timeout, _} -> {:error, :delivery_timeout}
+    :exit, {:noproc, _} -> {:error, :topic_not_found}
   end
 
   defp emit_metrics(message, %{metrics: metrics}) when not is_nil(metrics) do

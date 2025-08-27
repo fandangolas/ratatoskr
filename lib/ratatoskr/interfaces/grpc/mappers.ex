@@ -93,18 +93,16 @@ defmodule Ratatoskr.Interfaces.Grpc.Mappers do
   """
   @spec grpc_to_subscription_ref(String.t()) :: {:ok, reference()} | {:error, atom()}
   def grpc_to_subscription_ref(ref_string) when is_binary(ref_string) do
-    try do
-      decoded = Base.decode64!(ref_string)
-      ref = :erlang.binary_to_term(decoded)
+    decoded = Base.decode64!(ref_string)
+    ref = :erlang.binary_to_term(decoded)
 
-      if is_reference(ref) do
-        {:ok, ref}
-      else
-        {:error, :not_a_reference}
-      end
-    rescue
-      _ -> {:error, :invalid_format}
+    if is_reference(ref) do
+      {:ok, ref}
+    else
+      {:error, :not_a_reference}
     end
+  rescue
+    _ -> {:error, :invalid_format}
   end
 
   @doc """
@@ -132,13 +130,11 @@ defmodule Ratatoskr.Interfaces.Grpc.Mappers do
   # Private functions
 
   defp encode_payload_as_binary(payload) do
-    try do
-      # Try JSON encoding first
-      Jason.encode!(payload)
-    rescue
-      _ ->
-        # Fallback to Erlang term encoding
-        :erlang.term_to_binary(payload)
-    end
+    # Try JSON encoding first
+    Jason.encode!(payload)
+  rescue
+    _ ->
+      # Fallback to Erlang term encoding
+      :erlang.term_to_binary(payload)
   end
 end

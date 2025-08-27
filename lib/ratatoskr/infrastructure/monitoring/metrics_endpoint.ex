@@ -45,24 +45,20 @@ defmodule Ratatoskr.Infrastructure.Monitoring.MetricsEndpoint do
 
   # Public API for updating metrics (called from gRPC server)
   def increment_counter(metric_name, amount \\ 1) do
-    try do
-      :ets.update_counter(@metrics_table, metric_name, amount)
-    rescue
-      _ ->
-        # Table might not exist during startup
-        :ok
-    end
+    :ets.update_counter(@metrics_table, metric_name, amount)
+  rescue
+    _ ->
+      # Table might not exist during startup
+      :ok
   end
 
   def get_counter(metric_name) do
-    try do
-      case :ets.lookup(@metrics_table, metric_name) do
-        [{^metric_name, value}] -> value
-        [] -> 0
-      end
-    rescue
-      _ -> 0
+    case :ets.lookup(@metrics_table, metric_name) do
+      [{^metric_name, value}] -> value
+      [] -> 0
     end
+  rescue
+    _ -> 0
   end
 
   def child_spec(opts) do
@@ -143,28 +139,24 @@ defmodule Ratatoskr.Infrastructure.Monitoring.MetricsEndpoint do
 
   defp get_active_topics do
     # Count via Registry - lightweight lookup
-    try do
-      Registry.select(Ratatoskr.Registry, [{{:_, :"$1", :_}, [], [:"$1"]}])
-      |> length()
-    rescue
-      _ -> 0
-    end
+    Registry.select(Ratatoskr.Registry, [{{:_, :"$1", :_}, [], [:"$1"]}])
+    |> length()
+  rescue
+    _ -> 0
   end
 
   defp get_active_subscribers do
     # Real count of active subscribers from topic servers
-    try do
-      Registry.select(Ratatoskr.Registry, [{{:_, :_, :_}, [], [true]}])
-      |> Enum.map(fn _ ->
-        # Each topic can have multiple subscribers, get real count
-        # For now, estimate based on process message queue lengths
-        # Conservative estimate per topic
-        :rand.uniform(5)
-      end)
-      |> Enum.sum()
-    rescue
-      _ -> 0
-    end
+    Registry.select(Ratatoskr.Registry, [{{:_, :_, :_}, [], [true]}])
+    |> Enum.map(fn _ ->
+      # Each topic can have multiple subscribers, get real count
+      # For now, estimate based on process message queue lengths
+      # Conservative estimate per topic
+      :rand.uniform(5)
+    end)
+    |> Enum.sum()
+  rescue
+    _ -> 0
   end
 
   defp get_active_connections do

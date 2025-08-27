@@ -60,7 +60,7 @@ defmodule Ratatoskr.Servers.GrpcEndpoint do
       max_connections: max_connections,
       # Configurable acceptors for concurrency
       num_acceptors: num_acceptors,
-      # Socket-level optimizations  
+      # Socket-level optimizations
       socket_opts: [
         # Binary mode for efficiency
         :binary,

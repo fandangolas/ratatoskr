@@ -88,39 +88,33 @@ defmodule Ratatoskr.UseCases.SubscribeToTopic do
   end
 
   defp validate_subscription_limits(topic_pid, subscription) do
-    try do
-      case GenServer.call(topic_pid, {:can_add_subscriber, subscription}) do
-        :ok -> :ok
-        {:error, reason} -> {:error, reason}
-      end
-    catch
-      :exit, {:timeout, _} -> {:error, :topic_timeout}
-      :exit, {:noproc, _} -> {:error, :topic_not_found}
+    case GenServer.call(topic_pid, {:can_add_subscriber, subscription}) do
+      :ok -> :ok
+      {:error, reason} -> {:error, reason}
     end
+  catch
+    :exit, {:timeout, _} -> {:error, :topic_timeout}
+    :exit, {:noproc, _} -> {:error, :topic_not_found}
   end
 
   defp register_subscriber(topic_pid, subscription) do
-    try do
-      case GenServer.call(topic_pid, {:subscribe, subscription}) do
-        {:ok, _} -> :ok
-        {:error, reason} -> {:error, reason}
-      end
-    catch
-      :exit, {:timeout, _} -> {:error, :subscription_timeout}
-      :exit, {:noproc, _} -> {:error, :topic_not_found}
+    case GenServer.call(topic_pid, {:subscribe, subscription}) do
+      {:ok, _} -> :ok
+      {:error, reason} -> {:error, reason}
     end
+  catch
+    :exit, {:timeout, _} -> {:error, :subscription_timeout}
+    :exit, {:noproc, _} -> {:error, :topic_not_found}
   end
 
   defp unregister_subscriber(topic_pid, subscription_ref) do
-    try do
-      case GenServer.call(topic_pid, {:unsubscribe, subscription_ref}) do
-        :ok -> :ok
-        {:error, reason} -> {:error, reason}
-      end
-    catch
-      :exit, {:timeout, _} -> {:error, :unsubscribe_timeout}
-      :exit, {:noproc, _} -> {:error, :topic_not_found}
+    case GenServer.call(topic_pid, {:unsubscribe, subscription_ref}) do
+      :ok -> :ok
+      {:error, reason} -> {:error, reason}
     end
+  catch
+    :exit, {:timeout, _} -> {:error, :unsubscribe_timeout}
+    :exit, {:noproc, _} -> {:error, :topic_not_found}
   end
 
   defp setup_monitoring(subscription) do

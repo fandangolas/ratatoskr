@@ -116,11 +116,9 @@ defmodule Ratatoskr.Infrastructure.DI.Container do
   """
   @spec get_singleton(atom()) :: term() | {:error, term()}
   def get_singleton(key) do
-    try do
-      Lifecycle.get_singleton(key)
-    catch
-      :exit, _ -> {:error, :lifecycle_manager_not_available}
-    end
+    Lifecycle.get_singleton(key)
+  catch
+    :exit, _ -> {:error, :lifecycle_manager_not_available}
   end
 
   @doc """
@@ -133,11 +131,9 @@ defmodule Ratatoskr.Infrastructure.DI.Container do
   """
   @spec get_process_scoped(atom()) :: term() | {:error, term()}
   def get_process_scoped(key) do
-    try do
-      Lifecycle.get_process_scoped(key)
-    catch
-      :exit, _ -> {:error, :lifecycle_manager_not_available}
-    end
+    Lifecycle.get_process_scoped(key)
+  catch
+    :exit, _ -> {:error, :lifecycle_manager_not_available}
   end
 
   @doc """
@@ -150,11 +146,9 @@ defmodule Ratatoskr.Infrastructure.DI.Container do
   """
   @spec get_transient(atom()) :: term() | {:error, term()}
   def get_transient(key) do
-    try do
-      Lifecycle.get_transient(key)
-    catch
-      :exit, _ -> {:error, :lifecycle_manager_not_available}
-    end
+    Lifecycle.get_transient(key)
+  catch
+    :exit, _ -> {:error, :lifecycle_manager_not_available}
   end
 
   @doc """
@@ -270,17 +264,15 @@ defmodule Ratatoskr.Infrastructure.DI.Container do
 
   # Helper function to get environment since Mix is not available in releases
   defp get_env do
-    try do
-      # Check if Mix is available (for test/dev environments)
-      if Code.ensure_loaded?(Mix) do
-        Mix.env()
-      else
-        # Production environment or when Mix is not available
-        Application.get_env(:ratatoskr, :config_env, :prod)
-      end
-    rescue
-      _ -> :prod
+    # Check if Mix is available (for test/dev environments)
+    if Code.ensure_loaded?(Mix) do
+      Mix.env()
+    else
+      # Production environment or when Mix is not available
+      Application.get_env(:ratatoskr, :config_env, :prod)
     end
+  rescue
+    _ -> :prod
   end
 
   # Test environment dependencies

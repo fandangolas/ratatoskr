@@ -133,24 +133,22 @@ defmodule Ratatoskr.UseCases.PublishMessageBatch do
 
   @spec publish_validated_batch(pid(), [Message.t()], [batch_message()]) :: [batch_result()]
   defp publish_validated_batch(topic_pid, message_structs, original_messages) do
-    try do
-      case GenServer.call(topic_pid, {:publish_batch, message_structs}, 30_000) do
-        {:ok, message_ids} when is_list(message_ids) ->
-          process_successful_response(message_ids, original_messages)
+    case GenServer.call(topic_pid, {:publish_batch, message_structs}, 30_000) do
+      {:ok, message_ids} when is_list(message_ids) ->
+        process_successful_response(message_ids, original_messages)
 
-        {:error, reason} ->
-          create_error_results_for_all(original_messages, to_string(reason))
-      end
-    catch
-      :exit, {:timeout, _} ->
-        create_error_results_for_all(original_messages, "genserver_timeout")
-
-      :exit, {:noproc, _} ->
-        create_error_results_for_all(original_messages, "topic_process_not_found")
-
-      kind, reason ->
-        create_error_results_for_all(original_messages, "#{kind}:#{inspect(reason)}")
+      {:error, reason} ->
+        create_error_results_for_all(original_messages, to_string(reason))
     end
+  catch
+    :exit, {:timeout, _} ->
+      create_error_results_for_all(original_messages, "genserver_timeout")
+
+    :exit, {:noproc, _} ->
+      create_error_results_for_all(original_messages, "topic_process_not_found")
+
+    kind, reason ->
+      create_error_results_for_all(original_messages, "#{kind}:#{inspect(reason)}")
   end
 
   @spec process_successful_response(list(), [batch_message()]) :: [batch_result()]
@@ -239,26 +237,24 @@ defmodule Ratatoskr.UseCases.PublishMessageBatch do
   @spec find_topic_process(String.t(), module()) :: {:ok, pid()} | {:error, :not_found}
   defp find_topic_process(topic, registry) do
     # Use registry dependency directly for tests compatibility
-    try do
-      case registry.lookup_topic(topic) do
-        {:ok, pid} when is_pid(pid) ->
-          if Process.alive?(pid) do
-            {:ok, pid}
-          else
-            {:error, :topic_process_dead}
-          end
+    case registry.lookup_topic(topic) do
+      {:ok, pid} when is_pid(pid) ->
+        if Process.alive?(pid) do
+          {:ok, pid}
+        else
+          {:error, :topic_process_dead}
+        end
 
-        {:ok, not_pid} ->
-          {:error, {:invalid_pid, not_pid}}
+      {:ok, not_pid} ->
+        {:error, {:invalid_pid, not_pid}}
 
-        {:error, :not_found} ->
-          {:error, :not_found}
+      {:error, :not_found} ->
+        {:error, :not_found}
 
-        other ->
-          {:error, {:unexpected_response, other}}
-      end
-    rescue
-      error -> {:error, {:registry_error, error}}
+      other ->
+        {:error, {:unexpected_response, other}}
     end
+  rescue
+    error -> {:error, {:registry_error, error}}
   end
 end

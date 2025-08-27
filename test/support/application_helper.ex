@@ -357,14 +357,12 @@ defmodule ApplicationHelper do
   end
 
   defp kill_registered_cowboy_processes do
-    try do
-      # Find Cowboy listeners by looking at registered processes
-      Process.registered()
-      |> Enum.filter(&cowboy_related_process_name?/1)
-      |> Enum.each(&kill_process_by_name/1)
-    catch
-      _, _ -> :ok
-    end
+    # Find Cowboy listeners by looking at registered processes
+    Process.registered()
+    |> Enum.filter(&cowboy_related_process_name?/1)
+    |> Enum.each(&kill_process_by_name/1)
+  catch
+    _, _ -> :ok
   end
 
   defp kill_cowboy_processes_by_module do
@@ -386,19 +384,17 @@ defmodule ApplicationHelper do
   end
 
   defp kill_if_cowboy_module(pid) do
-    try do
-      case Process.info(pid, :initial_call) do
-        {:initial_call, {module, _fun, _arity}} ->
-          if cowboy_related_module?(module) do
-            Process.exit(pid, :kill)
-          end
+    case Process.info(pid, :initial_call) do
+      {:initial_call, {module, _fun, _arity}} ->
+        if cowboy_related_module?(module) do
+          Process.exit(pid, :kill)
+        end
 
-        _ ->
-          :ok
-      end
-    catch
-      _, _ -> :ok
+      _ ->
+        :ok
     end
+  catch
+    _, _ -> :ok
   end
 
   defp cowboy_related_module?(module) do
