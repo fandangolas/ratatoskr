@@ -8,6 +8,8 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
 
   use GRPC.Server, service: Ratatoskr.Grpc.MessageBroker.Service
   require Logger
+  
+  alias UUID
 
   alias Ratatoskr.Grpc.{
     CreateTopicRequest,
@@ -30,10 +32,11 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
   }
 
   alias Ratatoskr.Core.Logic.Subscription
+  alias Ratatoskr.Infrastructure.Batching.BatchedPublisher
   alias Ratatoskr.Infrastructure.DI.Container
   alias Ratatoskr.Infrastructure.Monitoring.MetricsEndpoint
   alias Ratatoskr.Interfaces.Grpc.Mappers
-  alias Ratatoskr.UseCases.{ManageTopics, PublishMessage, PublishMessageBatch, SubscribeToTopic}
+  alias Ratatoskr.UseCases.{ManageTopics, SubscribeToTopic}
 
   @doc """
   Creates a new topic.
@@ -135,7 +138,7 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
   end
 
   @doc """
-  Publishes a single message to a topic.
+  Publishes a single message to a topic using intelligent batching.
   """
   @spec publish(PublishRequest.t(), GRPC.Server.Stream.t()) :: PublishResponse.t()
   def publish(request, _stream) do
@@ -144,12 +147,11 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
     # Convert gRPC request to domain format
     metadata = Mappers.grpc_metadata_to_map(request.metadata)
 
-    opts = [
-      metadata: metadata
-    ]
-
-    case PublishMessage.execute(request.topic, request.payload, opts, Container.deps()) do
-      {:ok, message_id} ->
+    # Use batched publishing for better performance
+    message_id = UUID.uuid4()
+    
+    case BatchedPublisher.publish_async(request.topic, request.payload, metadata) do
+      :ok ->
         # Increment real metrics
         MetricsEndpoint.increment_counter(:messages_published, 1)
         MetricsEndpoint.increment_counter(:grpc_publish_success, 1)
@@ -175,53 +177,50 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
   end
 
   @doc """
-  Publishes multiple messages to a topic in a batch.
+  Publishes multiple messages to a topic in a batch using intelligent batching.
   """
   @spec publish_batch(PublishBatchRequest.t(), GRPC.Server.Stream.t()) :: PublishBatchResponse.t()
   def publish_batch(request, _stream) do
     Logger.debug("gRPC PublishBatch to: #{request.topic}, count: #{length(request.messages)}")
 
-    # Convert gRPC messages to batch_message format
+    # Convert gRPC messages to batch_message format with pre-generated IDs
     batch_messages =
       Enum.map(request.messages, fn msg ->
         metadata = Mappers.grpc_metadata_to_map(msg.metadata)
         topic = if msg.topic != "", do: msg.topic, else: request.topic
+        message_id = UUID.uuid4()
 
         %{
           topic: topic,
           payload: msg.payload,
-          metadata: metadata
+          metadata: Map.put(metadata, :message_id, message_id)
         }
       end)
 
-    # Use the optimized batch publishing use case
-    case PublishMessageBatch.execute(batch_messages, Container.deps()) do
-      {:ok, batch_results} ->
-        # Convert batch results to gRPC format
+    # Use the high-performance batched publisher
+    case BatchedPublisher.publish_batch_async(batch_messages) do
+      :ok ->
+        # Generate response for all messages (they're queued for processing)
         results =
-          Enum.map(batch_results, fn result ->
+          Enum.map(batch_messages, fn msg ->
             %PublishResponse{
-              message_id: result.message_id,
+              message_id: msg.metadata.message_id,
               timestamp: :os.system_time(:millisecond),
-              success: result.success,
-              error: result.error || ""
+              success: true,
+              error: ""
             }
           end)
 
-        success_count = Enum.count(results, & &1.success)
-        error_count = length(results) - success_count
+        success_count = length(results)
         
         # Increment real batch metrics
         MetricsEndpoint.increment_counter(:messages_published, success_count)
         MetricsEndpoint.increment_counter(:grpc_publish_batch_success, 1)
-        if error_count > 0 do
-          MetricsEndpoint.increment_counter(:grpc_publish_batch_error, 1)
-        end
 
         %PublishBatchResponse{
           results: results,
           success_count: success_count,
-          error_count: error_count
+          error_count: 0
         }
 
       {:error, reason} ->

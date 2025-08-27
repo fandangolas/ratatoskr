@@ -53,6 +53,9 @@ defmodule Ratatoskr.MixProject do
       {:grpc, "~> 0.7"},
       {:protobuf, "~> 0.12"},
       {:jason, "~> 1.4"},
+      
+      # Utilities
+      {:uuid, "~> 1.1"},
 
       # Monitoring (lightweight - no hot path metrics)
       {:prometheus_ex, "~> 3.0"},

@@ -35,7 +35,10 @@ defmodule Ratatoskr.Servers.Application do
       {GrpcEndpoint, []},
       
       # Lightweight monitoring (no hot-path overhead)
-      {Ratatoskr.Infrastructure.Monitoring.MetricsEndpoint, []}
+      {Ratatoskr.Infrastructure.Monitoring.MetricsEndpoint, []},
+      
+      # High-performance batching system
+      {Ratatoskr.Infrastructure.Batching.BatchedPublisher, []}
     ]
 
     opts = [strategy: :one_for_one, name: Ratatoskr.ApplicationSupervisor]
