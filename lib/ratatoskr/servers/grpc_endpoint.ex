@@ -45,11 +45,40 @@ defmodule Ratatoskr.Servers.GrpcEndpoint do
       _ -> parse_ip_string(host)
     end
     
-    # Start the gRPC server supervisor with our service
+    # Get configurable performance settings
+    max_connections = Application.get_env(:ratatoskr, :grpc_max_connections, 32_768)
+    num_acceptors = Application.get_env(:ratatoskr, :grpc_num_acceptors, 100)
+    send_buffer = Application.get_env(:ratatoskr, :grpc_send_buffer_size, 65536)
+    recv_buffer = Application.get_env(:ratatoskr, :grpc_recv_buffer_size, 65536)
+    
+    # Optimized adapter options for high performance
+    adapter_opts = [
+      ip: ip,
+      # Connection pool optimization
+      max_connections: max_connections,   # Configurable max connections
+      num_acceptors: num_acceptors,       # Configurable acceptors for concurrency
+      # Socket-level optimizations  
+      socket_opts: [
+        :binary,                        # Binary mode for efficiency
+        {:packet, :raw},                # Raw packet mode
+        {:active, false},               # Passive mode for backpressure
+        {:reuseaddr, true},             # Allow port reuse
+        {:nodelay, true},               # Disable Nagle's algorithm
+        {:send_timeout, 5000},          # 5s send timeout
+        {:send_timeout_close, true},    # Close on send timeout
+        {:keepalive, true},             # Enable TCP keepalive
+        # Configurable buffer optimizations
+        {:sndbuf, send_buffer},         # Configurable send buffer
+        {:recbuf, recv_buffer},         # Configurable receive buffer
+        {:buffer, recv_buffer}          # Configurable driver buffer
+      ]
+    ]
+    
+    # Start the gRPC server supervisor with optimized configuration
     GRPC.Server.Supervisor.start_link(
       port: port,
       start_server: true,
-      adapter_opts: [ip: ip],
+      adapter_opts: adapter_opts,
       servers: [Ratatoskr.Interfaces.Grpc.Server]
     )
   end

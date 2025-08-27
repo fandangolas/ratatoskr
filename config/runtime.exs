@@ -6,7 +6,12 @@ import Config
 # gRPC Server Configuration
 config :ratatoskr,
   grpc_host: System.get_env("RATATOSKR_GRPC_HOST", "0.0.0.0"),
-  grpc_port: System.get_env("RATATOSKR_GRPC_PORT", "50051") |> String.to_integer()
+  grpc_port: System.get_env("RATATOSKR_GRPC_PORT", "50051") |> String.to_integer(),
+  # gRPC Performance Tuning
+  grpc_max_connections: System.get_env("RATATOSKR_GRPC_MAX_CONNECTIONS", "32768") |> String.to_integer(),
+  grpc_num_acceptors: System.get_env("RATATOSKR_GRPC_NUM_ACCEPTORS", "100") |> String.to_integer(),
+  grpc_send_buffer_size: System.get_env("RATATOSKR_GRPC_SEND_BUFFER", "65536") |> String.to_integer(),
+  grpc_recv_buffer_size: System.get_env("RATATOSKR_GRPC_RECV_BUFFER", "65536") |> String.to_integer()
 
 # Logger configuration for production
 if config_env() == :prod do
