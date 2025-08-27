@@ -157,6 +157,20 @@ defmodule Ratatoskr.Servers.BrokerServer do
   end
 
   @impl true
+  def handle_call({:can_add_subscriber, _subscription}, _from, state) do
+    # Check if we can add a subscriber - for now, always allow
+    # In the future, this could implement rate limiting or resource checks
+    max_subscribers = Application.get_env(:ratatoskr, :max_subscribers_per_broker, 10_000)
+    
+    # Simple resource check - could be enhanced
+    if state.topic_count < max_subscribers do
+      {:reply, :ok, state}
+    else
+      {:reply, {:error, :subscriber_limit_exceeded}, state}
+    end
+  end
+
+  @impl true
   def handle_info({:message_published, _topic_name}, state) do
     # Update message count when notified of new messages
     new_state = %{state | total_messages: state.total_messages + 1}

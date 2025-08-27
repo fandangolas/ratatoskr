@@ -103,7 +103,7 @@ defmodule Ratatoskr.UseCases.PublishPartitionedMessage do
                 {:ok, batch_results} ->
                   Enum.map(batch_results, fn result ->
                     # Add partition_id for consistency
-                    %{result | partition_id: 0}
+                    Map.put(result, :partition_id, 0)
                   end)
 
                 {:error, reason} ->

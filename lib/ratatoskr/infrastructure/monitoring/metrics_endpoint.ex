@@ -15,7 +15,9 @@ defmodule Ratatoskr.Infrastructure.Monitoring.MetricsEndpoint do
   @metrics_table :ratatoskr_metrics
 
   def start_link(opts \\ []) do
-    port = Keyword.get(opts, :port, 4000)
+    # Get port from configuration or opts
+    config_port = Application.get_env(:ratatoskr, :metrics_port, 4000)
+    port = Keyword.get(opts, :port, config_port)
     Logger.info("Starting monitoring endpoint on port #{port}")
 
     # Initialize metrics ETS table

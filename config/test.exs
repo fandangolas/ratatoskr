@@ -2,6 +2,17 @@ import Config
 
 # Test environment configuration for Ratatoskr
 
+# Use different ports for services in tests to avoid conflicts
+config :ratatoskr,
+  grpc_port: 50052,
+  grpc_host: "127.0.0.1",
+  metrics_port: 4001
+
+# Disable partitioning for most tests to maintain backward compatibility
+config :ratatoskr, :partitioning,
+  default_partition_count: 1,
+  enable_partitioning: false
+
 # Reduce logging noise in tests
 config :logger, level: :warning
 

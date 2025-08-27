@@ -5,8 +5,11 @@ defmodule RatatoskrTest do
 
   setup_all do
     # Ensure the application is started for all tests
-    {:ok, _} = Application.ensure_all_started(:ratatoskr)
-    :ok
+    case Application.ensure_all_started(:ratatoskr) do
+      {:ok, _apps} -> :ok
+      {:error, {:already_started, :ratatoskr}} -> :ok
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   describe "Topic Management" do
