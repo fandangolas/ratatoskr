@@ -271,7 +271,13 @@ defmodule Ratatoskr.Infrastructure.DI.Container do
   # Helper function to get environment since Mix is not available in releases
   defp get_env do
     try do
-      Application.get_env(:ratatoskr, :config_env, :prod)
+      # Check if Mix is available (for test/dev environments)
+      if Code.ensure_loaded?(Mix) do
+        Mix.env()
+      else
+        # Production environment or when Mix is not available
+        Application.get_env(:ratatoskr, :config_env, :prod)
+      end
     rescue
       _ -> :prod
     end

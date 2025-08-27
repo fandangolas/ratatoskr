@@ -4,9 +4,9 @@ import Config
 
 # Use different ports for services in tests to avoid conflicts
 config :ratatoskr,
-  grpc_port: 50052,
+  grpc_port: 50053,
   grpc_host: "127.0.0.1",
-  metrics_port: 4001
+  metrics_port: 4002
 
 # Disable partitioning for most tests to maintain backward compatibility
 config :ratatoskr, :partitioning,

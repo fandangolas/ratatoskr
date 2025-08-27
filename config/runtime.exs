@@ -7,7 +7,7 @@ import Config
 if config_env() == :test do
   config :ratatoskr,
     grpc_host: System.get_env("RATATOSKR_GRPC_HOST", "127.0.0.1"),
-    grpc_port: System.get_env("RATATOSKR_GRPC_PORT", "50052") |> String.to_integer(),
+    grpc_port: System.get_env("RATATOSKR_GRPC_PORT", "50053") |> String.to_integer(),
     # gRPC Performance Tuning
     grpc_max_connections:
       System.get_env("RATATOSKR_GRPC_MAX_CONNECTIONS", "32768") |> String.to_integer(),
@@ -17,7 +17,7 @@ if config_env() == :test do
       System.get_env("RATATOSKR_GRPC_SEND_BUFFER", "65536") |> String.to_integer(),
     grpc_recv_buffer_size:
       System.get_env("RATATOSKR_GRPC_RECV_BUFFER", "65536") |> String.to_integer(),
-    metrics_port: System.get_env("RATATOSKR_METRICS_PORT", "4001") |> String.to_integer()
+    metrics_port: System.get_env("RATATOSKR_METRICS_PORT", "4002") |> String.to_integer()
 else
   config :ratatoskr,
     grpc_host: System.get_env("RATATOSKR_GRPC_HOST", "0.0.0.0"),

@@ -97,14 +97,26 @@ defmodule Ratatoskr.UseCases.PublishMessageBatch do
 
   @spec publish_batch_to_topic(pid(), String.t(), [batch_message()], deps()) :: [batch_result()]
   defp publish_batch_to_topic(topic_pid, topic, messages, _deps) do
-    # Convert to Message structs
-    message_structs =
+    # Convert to Message structs, handling errors
+    message_results =
       Enum.map(messages, fn msg ->
-        Message.new(topic, msg.payload, msg.metadata)
+        case Message.new(topic, msg.payload, msg.metadata) do
+          {:ok, message} -> {:ok, message}
+          {:error, reason} -> {:error, reason}
+        end
       end)
 
-    # Single GenServer call for the entire batch
-    case GenServer.call(topic_pid, {:publish_batch, message_structs}, 30_000) do
+    # Check if all messages were created successfully
+    case Enum.split_with(message_results, fn
+           {:ok, _} -> true
+           {:error, _} -> false
+         end) do
+      {successful_messages, []} ->
+        # All messages created successfully
+        message_structs = Enum.map(successful_messages, fn {:ok, msg} -> msg end)
+
+        # Single GenServer call for the entire batch
+        case GenServer.call(topic_pid, {:publish_batch, message_structs}, 30_000) do
       {:ok, message_ids} ->
         # Zip message IDs with original messages
         message_ids
@@ -118,15 +130,39 @@ defmodule Ratatoskr.UseCases.PublishMessageBatch do
           }
         end)
 
-      {:error, reason} ->
-        # Return error for all messages
-        Enum.map(messages, fn msg ->
-          %{
-            message_id: "",
-            topic: msg.topic,
-            success: false,
-            error: to_string(reason)
-          }
+        {:error, reason} ->
+          # Return error for all messages
+          Enum.map(messages, fn msg ->
+            %{
+              message_id: "",
+              topic: msg.topic,
+              success: false,
+              error: to_string(reason)
+            }
+          end)
+        end
+
+      {_successful_messages, _failed_messages} ->
+        # Some messages failed to create, return mixed results
+        Enum.zip(message_results, messages)
+        |> Enum.map(fn {result, original_msg} ->
+          case result do
+            {:ok, _message} ->
+              %{
+                message_id: "",
+                topic: original_msg.topic,
+                success: false,
+                error: "batch_partial_failure"
+              }
+
+            {:error, reason} ->
+              %{
+                message_id: "",
+                topic: original_msg.topic,
+                success: false,
+                error: to_string(reason)
+              }
+          end
         end)
     end
   rescue
@@ -158,8 +194,8 @@ defmodule Ratatoskr.UseCases.PublishMessageBatch do
 
   @spec find_topic_process(String.t(), module()) :: {:ok, pid()} | {:error, :not_found}
   defp find_topic_process(topic, registry) do
-    # Use topic cache for optimized lookups
-    case Ratatoskr.Infrastructure.Cache.TopicCache.get_topic_pid(topic, registry) do
+    # Use registry dependency directly for tests compatibility
+    case registry.lookup_topic(topic) do
       {:ok, pid} -> {:ok, pid}
       {:error, :not_found} -> {:error, :not_found}
     end
