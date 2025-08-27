@@ -32,7 +32,6 @@ defmodule Ratatoskr.Interfaces.Grpc.Server do
   }
 
   alias Ratatoskr.Core.Logic.Subscription
-  alias Ratatoskr.Infrastructure.Batching.BatchedPublisher
   alias Ratatoskr.Infrastructure.DI.Container
   alias Ratatoskr.Infrastructure.Monitoring.MetricsEndpoint
   alias Ratatoskr.Interfaces.Grpc.Mappers

@@ -14,8 +14,8 @@ defmodule Ratatoskr.UseCases.PublishPartitionedMessage do
   - Fallback to single-partition for non-partitioned topics
   """
   
-  alias Ratatoskr.Core.Logic.{Message, Topic}
-  alias Ratatoskr.Infrastructure.Partitioning.{PartitionManager, PartitionedTopic}
+  alias Ratatoskr.Core.Logic.Message
+  alias Ratatoskr.Infrastructure.Partitioning.PartitionedTopic
   alias Ratatoskr.UseCases.PublishMessage
   
   @type deps :: %{
@@ -131,7 +131,7 @@ defmodule Ratatoskr.UseCases.PublishPartitionedMessage do
   
   ## Private Functions
   
-  defp is_partitioned_topic?(topic_name, deps) do
+  defp is_partitioned_topic?(topic_name, _deps) do
     # Check if partitioning is enabled globally
     partitioning_config = Application.get_env(:ratatoskr, :partitioning, [])
     partitioning_enabled = Keyword.get(partitioning_config, :enable_partitioning, false)
@@ -172,7 +172,7 @@ defmodule Ratatoskr.UseCases.PublishPartitionedMessage do
     end
   end
   
-  defp publish_batch_to_partitioned_topic(topic_name, messages, deps) do
+  defp publish_batch_to_partitioned_topic(topic_name, messages, _deps) do
     # Convert messages to proper format with Message structs
     processed_messages = 
       Enum.map(messages, fn msg ->
@@ -211,7 +211,7 @@ defmodule Ratatoskr.UseCases.PublishPartitionedMessage do
             batch_results
             
           {:error, reason} ->
-            Enum.map(valid_messages, fn msg ->
+            Enum.map(valid_messages, fn _msg ->
               %{
                 message_id: "",
                 topic: topic_name,

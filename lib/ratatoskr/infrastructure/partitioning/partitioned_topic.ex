@@ -18,7 +18,6 @@ defmodule Ratatoskr.Infrastructure.Partitioning.PartitionedTopic do
   require Logger
   
   alias Ratatoskr.Infrastructure.Partitioning.PartitionManager
-  alias Ratatoskr.Infrastructure.Batching.BatchedPublisher
   alias Ratatoskr.Infrastructure.DI.Container
   
   defmodule State do
@@ -189,9 +188,9 @@ defmodule Ratatoskr.Infrastructure.Partitioning.PartitionedTopic do
   end
   
   @impl true
-  def handle_call({:publish, message}, _from, state) do
+  def handle_call({:publish, message}, from, state) do
     # Use the publish_message handler for consistency
-    handle_call({:publish_message, message, message.partition_key}, _from, state)
+    handle_call({:publish_message, message, message.partition_key}, from, state)
   end
 
   @impl true

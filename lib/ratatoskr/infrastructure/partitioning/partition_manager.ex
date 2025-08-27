@@ -285,7 +285,7 @@ defmodule Ratatoskr.Infrastructure.Partitioning.PartitionManager do
     end
   end
   
-  defp find_partition_in_ring(hash, sorted_ring, partition_count) do
+  defp find_partition_in_ring(hash, sorted_ring, _partition_count) do
     # Binary search for the first hash >= target hash
     case Enum.find(sorted_ring, fn {ring_hash, _partition_id} -> ring_hash >= hash end) do
       {_ring_hash, partition_id} ->
