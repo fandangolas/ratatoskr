@@ -172,38 +172,53 @@ defmodule ApplicationHelper do
     if elapsed > timeout do
       :timeout
     else
-      # Check if key processes are actually dead
-      key_processes = [
-        Ratatoskr.ApplicationSupervisor,
-        Ratatoskr.Registry,
-        Ratatoskr.Infrastructure.DI.Lifecycle
-      ]
-
-      still_running = Enum.filter(key_processes, &Process.whereis/1)
-
-      if Enum.empty?(still_running) do
-        # Also check Ranch server proxy specifically
-        case :global.whereis_name(:ranch_server_proxy) do
-          :undefined ->
-            # Also check for any lingering MetricsEndpoint processes
-            if metrics_endpoint_processes_alive?() do
-              Process.sleep(50)
-              wait_for_shutdown_completion(start_time, timeout)
-            else
-              # Give Ranch extra time to clean up
-              Process.sleep(100)
-              :ok
-            end
-
-          _pid ->
-            Process.sleep(50)
-            wait_for_shutdown_completion(start_time, timeout)
-        end
-      else
-        Process.sleep(50)
-        wait_for_shutdown_completion(start_time, timeout)
-      end
+      check_processes_and_continue_wait(start_time, timeout)
     end
+  end
+
+  defp check_processes_and_continue_wait(start_time, timeout) do
+    # Check if key processes are actually dead
+    key_processes = [
+      Ratatoskr.ApplicationSupervisor,
+      Ratatoskr.Registry,
+      Ratatoskr.Infrastructure.DI.Lifecycle
+    ]
+
+    still_running = Enum.filter(key_processes, &Process.whereis/1)
+
+    if Enum.empty?(still_running) do
+      check_ranch_and_finalize_shutdown(start_time, timeout)
+    else
+      sleep_and_retry_wait(start_time, timeout)
+    end
+  end
+
+  defp check_ranch_and_finalize_shutdown(start_time, timeout) do
+    # Also check Ranch server proxy specifically
+    case :global.whereis_name(:ranch_server_proxy) do
+      :undefined ->
+        finalize_shutdown_check(start_time, timeout)
+
+      _pid ->
+        sleep_and_retry_wait(start_time, timeout)
+    end
+  end
+
+  defp finalize_shutdown_check(start_time, timeout) do
+    # Also check for any lingering MetricsEndpoint processes
+    if metrics_endpoint_processes_alive?() do
+      Process.sleep(50)
+      wait_for_shutdown_completion(start_time, timeout)
+    else
+      # Give Ranch extra time to clean up
+      Process.sleep(100)
+      :ok
+    end
+  end
+
+  defp sleep_and_retry_wait(start_time, timeout) do
+    Process.sleep(50)
+    wait_for_shutdown_completion(start_time, timeout)
   end
 
   defp ensure_application_running_with_retry(retries \\ 3) do
@@ -337,43 +352,59 @@ defmodule ApplicationHelper do
 
   defp force_stop_cowboy_http_processes do
     # Specifically target Cowboy HTTP listeners that might be lingering
+    kill_registered_cowboy_processes()
+    kill_cowboy_processes_by_module()
+  end
+
+  defp kill_registered_cowboy_processes do
     try do
       # Find Cowboy listeners by looking at registered processes
       Process.registered()
-      |> Enum.filter(fn name ->
-        name_str = to_string(name)
-        name_str =~ "cowboy" or name_str =~ "ranch" or name_str =~ "acceptor"
-      end)
-      |> Enum.each(fn name ->
-        case Process.whereis(name) do
-          nil -> :ok
-          pid -> Process.exit(pid, :kill)
-        end
-      end)
+      |> Enum.filter(&cowboy_related_process_name?/1)
+      |> Enum.each(&kill_process_by_name/1)
     catch
       _, _ -> :ok
     end
+  end
 
+  defp kill_cowboy_processes_by_module do
     # Also target by module/initial_call patterns
     Process.list()
-    |> Enum.each(fn pid ->
-      try do
-        case Process.info(pid, :initial_call) do
-          {:initial_call, {module, _fun, _arity}} ->
-            module_str = to_string(module)
+    |> Enum.each(&kill_if_cowboy_module/1)
+  end
 
-            if module_str =~ "cowboy" or module_str =~ "ranch" or
-                 module_str =~ "acceptor" or module_str =~ "listener" do
-              Process.exit(pid, :kill)
-            end
+  defp cowboy_related_process_name?(name) do
+    name_str = to_string(name)
+    name_str =~ "cowboy" or name_str =~ "ranch" or name_str =~ "acceptor"
+  end
 
-          _ ->
-            :ok
-        end
-      catch
-        _, _ -> :ok
+  defp kill_process_by_name(name) do
+    case Process.whereis(name) do
+      nil -> :ok
+      pid -> Process.exit(pid, :kill)
+    end
+  end
+
+  defp kill_if_cowboy_module(pid) do
+    try do
+      case Process.info(pid, :initial_call) do
+        {:initial_call, {module, _fun, _arity}} ->
+          if cowboy_related_module?(module) do
+            Process.exit(pid, :kill)
+          end
+
+        _ ->
+          :ok
       end
-    end)
+    catch
+      _, _ -> :ok
+    end
+  end
+
+  defp cowboy_related_module?(module) do
+    module_str = to_string(module)
+    module_str =~ "cowboy" or module_str =~ "ranch" or
+      module_str =~ "acceptor" or module_str =~ "listener"
   end
 
   defp metrics_endpoint_processes_alive? do

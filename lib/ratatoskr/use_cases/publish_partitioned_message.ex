@@ -82,45 +82,7 @@ defmodule Ratatoskr.UseCases.PublishPartitionedMessage do
     grouped_messages = Enum.group_by(messages, & &1.topic)
 
     # Process each topic in parallel
-    tasks =
-      for {topic_name, topic_messages} <- grouped_messages do
-        Task.async(fn ->
-          case partitioned_topic?(topic_name, deps) do
-            true ->
-              publish_batch_to_partitioned_topic(topic_name, topic_messages, deps)
-
-            false ->
-              # Use existing batch publishing for non-partitioned topics
-              fallback_batch_messages =
-                Enum.map(topic_messages, fn msg ->
-                  %{
-                    topic: msg.topic,
-                    payload: msg.payload,
-                    metadata: Map.get(msg, :metadata, %{})
-                  }
-                end)
-
-              case PublishMessageBatch.execute(fallback_batch_messages, deps) do
-                {:ok, batch_results} ->
-                  Enum.map(batch_results, fn result ->
-                    # Add partition_id for consistency
-                    Map.put(result, :partition_id, 0)
-                  end)
-
-                {:error, reason} ->
-                  Enum.map(topic_messages, fn msg ->
-                    %{
-                      message_id: "",
-                      topic: msg.topic,
-                      partition_id: 0,
-                      success: false,
-                      error: to_string(reason)
-                    }
-                  end)
-              end
-          end
-        end)
-      end
+    tasks = create_batch_processing_tasks(grouped_messages, deps)
 
     # Wait for all tasks and flatten results
     results =
@@ -132,6 +94,66 @@ defmodule Ratatoskr.UseCases.PublishPartitionedMessage do
   rescue
     error ->
       {:error, error}
+  end
+
+  defp create_batch_processing_tasks(grouped_messages, deps) do
+    for {topic_name, topic_messages} <- grouped_messages do
+      Task.async(fn ->
+        process_topic_batch(topic_name, topic_messages, deps)
+      end)
+    end
+  end
+
+  defp process_topic_batch(topic_name, topic_messages, deps) do
+    case partitioned_topic?(topic_name, deps) do
+      true ->
+        publish_batch_to_partitioned_topic(topic_name, topic_messages, deps)
+
+      false ->
+        process_fallback_batch(topic_messages, deps)
+    end
+  end
+
+  defp process_fallback_batch(topic_messages, deps) do
+    # Use existing batch publishing for non-partitioned topics
+    fallback_batch_messages = prepare_fallback_messages(topic_messages)
+
+    case PublishMessageBatch.execute(fallback_batch_messages, deps) do
+      {:ok, batch_results} ->
+        add_partition_id_to_results(batch_results)
+
+      {:error, reason} ->
+        create_error_results_for_fallback(topic_messages, reason)
+    end
+  end
+
+  defp prepare_fallback_messages(topic_messages) do
+    Enum.map(topic_messages, fn msg ->
+      %{
+        topic: msg.topic,
+        payload: msg.payload,
+        metadata: Map.get(msg, :metadata, %{})
+      }
+    end)
+  end
+
+  defp add_partition_id_to_results(batch_results) do
+    Enum.map(batch_results, fn result ->
+      # Add partition_id for consistency
+      Map.put(result, :partition_id, 0)
+    end)
+  end
+
+  defp create_error_results_for_fallback(topic_messages, reason) do
+    Enum.map(topic_messages, fn msg ->
+      %{
+        message_id: "",
+        topic: msg.topic,
+        partition_id: 0,
+        success: false,
+        error: to_string(reason)
+      }
+    end)
   end
 
   ## Private Functions

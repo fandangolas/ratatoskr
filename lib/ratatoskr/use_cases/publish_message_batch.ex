@@ -98,7 +98,18 @@ defmodule Ratatoskr.UseCases.PublishMessageBatch do
 
   @spec publish_batch_to_topic(pid(), String.t(), [batch_message()], deps()) :: [batch_result()]
   defp publish_batch_to_topic(topic_pid, topic, messages, _deps) do
-    # Convert to Message structs, handling errors
+    case validate_and_convert_messages(topic, messages) do
+      {:ok, message_structs} ->
+        publish_validated_batch(topic_pid, message_structs, messages)
+
+      {:error, message_results} ->
+        handle_partial_message_failures(message_results, messages)
+    end
+  end
+
+  @spec validate_and_convert_messages(String.t(), [batch_message()]) ::
+          {:ok, [Message.t()]} | {:error, list()}
+  defp validate_and_convert_messages(topic, messages) do
     message_results =
       Enum.map(messages, fn msg ->
         case Message.new(topic, msg.payload, metadata: msg.metadata) do
@@ -107,126 +118,108 @@ defmodule Ratatoskr.UseCases.PublishMessageBatch do
         end
       end)
 
-    # Check if all messages were created successfully
     case Enum.split_with(message_results, fn
            {:ok, _} -> true
            {:error, _} -> false
          end) do
       {successful_messages, []} ->
-        # All messages created successfully
         message_structs = Enum.map(successful_messages, fn {:ok, msg} -> msg end)
+        {:ok, message_structs}
 
-        # Single GenServer call for the entire batch
-        try do
-          case GenServer.call(topic_pid, {:publish_batch, message_structs}, 30_000) do
-            {:ok, message_ids} when is_list(message_ids) ->
-              # Check if it's a list of strings (regular topic) or result maps (partitioned topic)
-              case List.first(message_ids) do
-                id when is_binary(id) ->
-                  # Regular TopicServer response: list of message IDs
-                  message_ids
-                  |> Enum.zip(messages)
-                  |> Enum.map(fn {message_id, original_msg} ->
-                    %{
-                      message_id: message_id,
-                      topic: original_msg.topic,
-                      success: true,
-                      error: nil
-                    }
-                  end)
-
-                %{message_id: _, success: _, error: _} ->
-                  # PartitionedTopic response: list of result maps
-                  Enum.map(message_ids, fn result ->
-                    %{
-                      message_id: result.message_id || "",
-                      topic: result[:topic] || result.original_message.topic,
-                      success: result.success,
-                      error: result.error
-                    }
-                  end)
-
-                _ ->
-                  # Unknown format
-                  Enum.map(messages, fn msg ->
-                    %{
-                      message_id: "",
-                      topic: msg.topic,
-                      success: false,
-                      error: "unknown_response_format"
-                    }
-                  end)
-              end
-
-            {:error, reason} ->
-              # Return error for all messages
-              Enum.map(messages, fn msg ->
-                %{
-                  message_id: "",
-                  topic: msg.topic,
-                  success: false,
-                  error: to_string(reason)
-                }
-              end)
-          end
-        catch
-          :exit, {:timeout, _} ->
-            # Timeout error
-            Enum.map(messages, fn msg ->
-              %{
-                message_id: "",
-                topic: msg.topic,
-                success: false,
-                error: "genserver_timeout"
-              }
-            end)
-
-          :exit, {:noproc, _} ->
-            # Process not available
-            Enum.map(messages, fn msg ->
-              %{
-                message_id: "",
-                topic: msg.topic,
-                success: false,
-                error: "topic_process_not_found"
-              }
-            end)
-
-          kind, reason ->
-            # Other errors
-            Enum.map(messages, fn msg ->
-              %{
-                message_id: "",
-                topic: msg.topic,
-                success: false,
-                error: "#{kind}:#{inspect(reason)}"
-              }
-            end)
-        end
-
-      {_successful_messages, _failed_messages} ->
-        # Some messages failed to create, return mixed results
-        Enum.zip(message_results, messages)
-        |> Enum.map(fn {result, original_msg} ->
-          case result do
-            {:ok, _message} ->
-              %{
-                message_id: "",
-                topic: original_msg.topic,
-                success: false,
-                error: "batch_partial_failure"
-              }
-
-            {:error, reason} ->
-              %{
-                message_id: "",
-                topic: original_msg.topic,
-                success: false,
-                error: to_string(reason)
-              }
-          end
-        end)
+      _ ->
+        {:error, message_results}
     end
+  end
+
+  @spec publish_validated_batch(pid(), [Message.t()], [batch_message()]) :: [batch_result()]
+  defp publish_validated_batch(topic_pid, message_structs, original_messages) do
+    try do
+      case GenServer.call(topic_pid, {:publish_batch, message_structs}, 30_000) do
+        {:ok, message_ids} when is_list(message_ids) ->
+          process_successful_response(message_ids, original_messages)
+
+        {:error, reason} ->
+          create_error_results_for_all(original_messages, to_string(reason))
+      end
+    catch
+      :exit, {:timeout, _} ->
+        create_error_results_for_all(original_messages, "genserver_timeout")
+
+      :exit, {:noproc, _} ->
+        create_error_results_for_all(original_messages, "topic_process_not_found")
+
+      kind, reason ->
+        create_error_results_for_all(original_messages, "#{kind}:#{inspect(reason)}")
+    end
+  end
+
+  @spec process_successful_response(list(), [batch_message()]) :: [batch_result()]
+  defp process_successful_response(message_ids, original_messages) do
+    case List.first(message_ids) do
+      id when is_binary(id) ->
+        # Regular TopicServer response: list of message IDs
+        message_ids
+        |> Enum.zip(original_messages)
+        |> Enum.map(fn {message_id, original_msg} ->
+          %{
+            message_id: message_id,
+            topic: original_msg.topic,
+            success: true,
+            error: nil
+          }
+        end)
+
+      %{message_id: _, success: _, error: _} ->
+        # PartitionedTopic response: list of result maps
+        Enum.map(message_ids, fn result ->
+          %{
+            message_id: result.message_id || "",
+            topic: result[:topic] || result.original_message.topic,
+            success: result.success,
+            error: result.error
+          }
+        end)
+
+      _ ->
+        # Unknown format
+        create_error_results_for_all(original_messages, "unknown_response_format")
+    end
+  end
+
+  @spec create_error_results_for_all([batch_message()], String.t()) :: [batch_result()]
+  defp create_error_results_for_all(messages, error_message) do
+    Enum.map(messages, fn msg ->
+      %{
+        message_id: "",
+        topic: msg.topic,
+        success: false,
+        error: error_message
+      }
+    end)
+  end
+
+  @spec handle_partial_message_failures(list(), [batch_message()]) :: [batch_result()]
+  defp handle_partial_message_failures(message_results, original_messages) do
+    Enum.zip(message_results, original_messages)
+    |> Enum.map(fn {result, original_msg} ->
+      case result do
+        {:ok, _message} ->
+          %{
+            message_id: "",
+            topic: original_msg.topic,
+            success: false,
+            error: "batch_partial_failure"
+          }
+
+        {:error, reason} ->
+          %{
+            message_id: "",
+            topic: original_msg.topic,
+            success: false,
+            error: to_string(reason)
+          }
+      end
+    end)
   end
 
   @spec create_topic_and_publish(String.t(), [batch_message()], deps()) ::
