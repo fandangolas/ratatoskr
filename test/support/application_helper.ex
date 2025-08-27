@@ -399,6 +399,7 @@ defmodule ApplicationHelper do
 
   defp cowboy_related_module?(module) do
     module_str = to_string(module)
+
     module_str =~ "cowboy" or module_str =~ "ranch" or
       module_str =~ "acceptor" or module_str =~ "listener"
   end
