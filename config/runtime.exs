@@ -17,8 +17,7 @@ if config_env() == :test do
       System.get_env("RATATOSKR_GRPC_SEND_BUFFER", "65536") |> String.to_integer(),
     grpc_recv_buffer_size:
       System.get_env("RATATOSKR_GRPC_RECV_BUFFER", "65536") |> String.to_integer(),
-    metrics_port:
-      System.get_env("RATATOSKR_METRICS_PORT", "4001") |> String.to_integer()
+    metrics_port: System.get_env("RATATOSKR_METRICS_PORT", "4001") |> String.to_integer()
 else
   config :ratatoskr,
     grpc_host: System.get_env("RATATOSKR_GRPC_HOST", "0.0.0.0"),
@@ -32,8 +31,7 @@ else
       System.get_env("RATATOSKR_GRPC_SEND_BUFFER", "65536") |> String.to_integer(),
     grpc_recv_buffer_size:
       System.get_env("RATATOSKR_GRPC_RECV_BUFFER", "65536") |> String.to_integer(),
-    metrics_port:
-      System.get_env("RATATOSKR_METRICS_PORT", "4000") |> String.to_integer()
+    metrics_port: System.get_env("RATATOSKR_METRICS_PORT", "4000") |> String.to_integer()
 end
 
 # Logger configuration for production

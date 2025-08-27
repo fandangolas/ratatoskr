@@ -161,7 +161,7 @@ defmodule Ratatoskr.Servers.BrokerServer do
     # Check if we can add a subscriber - for now, always allow
     # In the future, this could implement rate limiting or resource checks
     max_subscribers = Application.get_env(:ratatoskr, :max_subscribers_per_broker, 10_000)
-    
+
     # Simple resource check - could be enhanced
     if state.topic_count < max_subscribers do
       {:reply, :ok, state}
